@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HUMAINIZE Pro — Settings</title>
+    <meta name="description" content="Manage your HUMAINIZE Pro account, subscription, and payment information.">
+    <meta name="theme-color" content="#0F172A">
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="landing.css">
+    <link rel="stylesheet" href="pages.css">
+</head>
+
+<body>
+
+    <!-- ─── Navbar ─── -->
+    <nav class="navbar scrolled" id="navbar">
+        <div class="nav-inner">
+            <a class="nav-logo" href="index.html">
+                <div class="nav-logo-icon">H</div>
+                <span class="nav-logo-text">HUMAINIZE <span class="pro-badge">PRO</span></span>
+            </a>
+            <div class="nav-links" id="nav-links">
+                <a href="app-page.html">Humanizer</a>
+                <a href="checker.html">AI Checker</a>
+                <a href="pricing.html">Pricing</a>
+            </div>
+            <div class="nav-actions">
+                <a href="app-page.html" class="btn-cta-sm">Open Humanizer</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- ─── Page Hero ─── -->
+    <section class="page-hero">
+        <div class="section-inner">
+            <span class="section-label">Settings</span>
+            <h1 class="section-title">Account Settings</h1>
+            <p class="section-subtitle">Manage your profile, subscription, and payment info.</p>
+        </div>
+    </section>
+
+    <!-- ─── Settings ─── -->
+    <section class="section" style="padding-top: 0;">
+        <div class="settings-layout">
+
+            <!-- Profile -->
+            <div class="settings-card">
+                <div class="settings-card-header">
+                    <h2>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
+                            <circle cx="12" cy="7" r="4" />
+                        </svg>
+                        Profile
+                    </h2>
+                </div>
+                <div class="settings-card-body">
+                    <div class="settings-row">
+                        <span class="settings-label">Email</span>
+                        <span class="settings-value" id="settings-email">Not logged in</span>
+                    </div>
+                    <div class="settings-row">
+                        <span class="settings-label">Account Created</span>
+                        <span class="settings-value" id="settings-created">—</span>
+                    </div>
+                    <div class="settings-row">
+                        <span class="settings-label">Password</span>
+                        <div class="settings-actions">
+                            <button class="btn-sm" id="btn-change-password">Change Password</button>
+                        </div>
+                    </div>
+                </div>
+                <!-- Password Change Form (hidden by default) -->
+                <div class="settings-card-body" id="password-form-container"
+                    style="display:none; border-top: 1px solid var(--border);">
+                    <form class="settings-form" id="password-form">
+                        <div class="form-group">
+                            <label>Current Password</label>
+                            <input type="password" class="form-input" id="current-password"
+                                placeholder="Enter current password" required>
+                        </div>
+                        <div class="form-group">
+                            <label>New Password</label>
+                            <input type="password" class="form-input" id="new-password" placeholder="Min 6 characters"
+                                required minlength="6">
+                        </div>
+                        <div style="display: flex; gap: 8px;">
+                            <button type="submit" class="btn-sm btn-sm-primary">Save Password</button>
+                            <button type="button" class="btn-sm" id="btn-cancel-password">Cancel</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Subscription -->
+            <div class="settings-card">
+                <div class="settings-card-header">
+                    <h2>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M21 4H3l9 7.09L21 4z" />
+                            <path d="M21 4v12a2 2 0 01-2 2H5a2 2 0 01-2-2V4" />
+                        </svg>
+                        Subscription
+                    </h2>
+                </div>
+                <div class="settings-card-body">
+                    <div class="settings-row">
+                        <span class="settings-label">Current Plan</span>
+                        <span class="settings-value">
+                            <span class="plan-badge" id="settings-plan-badge">Free</span>
+                        </span>
+                    </div>
+                    <div class="settings-row">
+                        <span class="settings-label">Words Used Today</span>
+                        <span class="settings-value" id="settings-words-used">0 / 500</span>
+                    </div>
+                    <div class="settings-row">
+                        <span class="settings-label">Daily Limit</span>
+                        <span class="settings-value" id="settings-daily-limit">500 words</span>
+                    </div>
+                    <div class="settings-row" id="settings-upgrade-row">
+                        <span class="settings-label">Want unlimited access?</span>
+                        <div class="settings-actions">
+                            <a href="pricing.html" class="btn-sm btn-sm-primary">Upgrade to Pro</a>
+                        </div>
+                    </div>
+                    <div class="settings-row" id="settings-cancel-row" style="display:none;">
+                        <span class="settings-label">Cancel Subscription</span>
+                        <div class="settings-actions">
+                            <button class="btn-sm btn-sm-danger" id="btn-cancel-sub">Cancel Plan</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Payment Info -->
+            <div class="settings-card">
+                <div class="settings-card-header">
+                    <h2>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <rect x="1" y="4" width="22" height="16" rx="2" ry="2" />
+                            <line x1="1" y1="10" x2="23" y2="10" />
+                        </svg>
+                        Payment Information
+                    </h2>
+                </div>
+                <div class="settings-card-body">
+                    <div class="settings-row">
+                        <span class="settings-label">Payment Method</span>
+                        <span class="settings-value" id="settings-payment-method">No card on file</span>
+                    </div>
+                    <div class="settings-row" id="settings-payment-name-row" style="display:none;">
+                        <span class="settings-label">Cardholder</span>
+                        <span class="settings-value" id="settings-payment-name">—</span>
+                    </div>
+                    <div class="settings-row" id="settings-payment-expiry-row" style="display:none;">
+                        <span class="settings-label">Expires</span>
+                        <span class="settings-value" id="settings-payment-expiry">—</span>
+                    </div>
+                    <div class="settings-row">
+                        <span class="settings-label">Billing</span>
+                        <div class="settings-actions" id="settings-billing-actions">
+                            <a href="pricing.html" class="btn-sm">Add Payment Method</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Danger Zone -->
+            <div class="settings-card" style="border-color: rgba(239, 68, 68, 0.2);">
+                <div class="settings-card-header">
+                    <h2 style="color: #EF4444;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#EF4444" stroke-width="2">
+                            <path
+                                d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                            <line x1="12" y1="9" x2="12" y2="13" />
+                            <line x1="12" y1="17" x2="12.01" y2="17" />
+                        </svg>
+                        Danger Zone
+                    </h2>
+                </div>
+                <div class="settings-card-body">
+                    <div class="settings-row">
+                        <span class="settings-label">Log out of your account</span>
+                        <button class="btn-sm btn-sm-danger" id="btn-logout">Log Out</button>
+                    </div>
+                    <div class="settings-row">
+                        <span class="settings-label">Permanently delete your account and all data</span>
+                        <button class="btn-sm btn-sm-danger" id="btn-delete-account">Delete Account</button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-inner">
+            <div class="footer-brand">
+                <div class="nav-logo-icon">H</div>
+                <span>HUMAINIZE Pro</span>
+            </div>
+            <div class="footer-links">
+                <a href="index.html">Home</a>
+                <a href="pricing.html">Pricing</a>
+                <a href="checker.html">AI Checker</a>
+            </div>
+            <div class="footer-copy">&copy; 2025 HUMAINIZE Pro. All rights reserved.</div>
+        </div>
+    </footer>
+
+    <div class="toast" id="toast"></div>
+
+    <script src="settings.js"></script>
+</body>
+
+</html>

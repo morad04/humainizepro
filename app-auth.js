@@ -126,7 +126,7 @@
 
     function handleUpgrade() {
         // Redirect to pricing page — user must pay to upgrade
-        window.location.href = 'index.html#pricing';
+        window.location.href = 'pricing.html';
     }
 
     upgradeNow.addEventListener('click', handleUpgrade);

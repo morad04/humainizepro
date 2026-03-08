@@ -1127,3 +1127,87 @@ body {
         transform: translateY(0);
     }
 }
+
+/* ─── Tools Grid ─── */
+.tools-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 24px;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.tool-card {
+    display: flex;
+    flex-direction: column;
+    padding: 36px 28px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    text-decoration: none;
+    color: var(--text);
+    transition: border-color 0.3s, transform 0.3s;
+    cursor: pointer;
+}
+
+.tool-card:hover {
+    border-color: var(--cta);
+    transform: translateY(-4px);
+}
+
+.tool-icon {
+    width: 56px;
+    height: 56px;
+    background: rgba(34, 197, 94, 0.1);
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 20px;
+    color: var(--cta);
+}
+
+.tool-icon-blue {
+    background: rgba(56, 189, 248, 0.1);
+    color: #38BDF8;
+}
+
+.tool-card h3 {
+    font-size: 20px;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.tool-card p {
+    font-size: 14px;
+    color: var(--text-muted);
+    line-height: 1.7;
+    flex: 1;
+}
+
+.tool-cta {
+    display: inline-block;
+    margin-top: 16px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--cta);
+}
+
+.tool-card:hover .tool-cta {
+    text-decoration: underline;
+}
+
+.faq-answer a {
+    color: var(--cta);
+    text-decoration: none;
+}
+
+.faq-answer a:hover {
+    text-decoration: underline;
+}
+
+@media (max-width: 600px) {
+    .tools-grid {
+        grid-template-columns: 1fr;
+    }
+}

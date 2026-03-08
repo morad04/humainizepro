@@ -1236,34 +1236,82 @@
     }
 
     // ═══════════════════════════════════════════════════════════
-    // PASS 13: UNICODE SPACE INJECTION (Key Bypass Technique)
-    // AI detectors tokenize text based on standard spaces.
-    // Replacing spaces with visually identical Unicode spaces
-    // disrupts tokenization and breaks detector pattern matching.
-    // Based on: github.com/Oct4Pie/zero-zerogpt
+    // PASS 13: TRIPLE-LAYER TOKENIZATION ATTACK
+    // Attacks AI detector tokenization at 3 levels:
+    // 1. Homoglyph replacement (SilverSpeak paper, ACL 2025)
+    // 2. Zero-width character injection
+    // 3. Unicode space mixing
     // ═══════════════════════════════════════════════════════════
     if (strength >= 2) {
-      const unicodeSpaces = [
-        '\u2000', // En Quad
-        '\u2001', // Em Quad
-        '\u2002', // En Space
-        '\u2003', // Em Space
-        '\u2004', // Three-Per-Em Space
-        '\u2005', // Four-Per-Em Space
-        '\u2006', // Six-Per-Em Space
-        '\u2007', // Figure Space
-        '\u2008', // Punctuation Space
-        '\u2009', // Thin Space
-        '\u200A', // Hair Space
-        '\u205F', // Medium Mathematical Space
+      // --- Layer 1: Homoglyph Replacement ---
+      // Replace Latin characters with visually identical Cyrillic/Greek chars
+      // This completely breaks tokenizer vocabulary lookups
+      const homoglyphs = {
+        'a': '\u0430', // Cyrillic а
+        'e': '\u0435', // Cyrillic е
+        'o': '\u043E', // Cyrillic о
+        'c': '\u0441', // Cyrillic с
+        'p': '\u0440', // Cyrillic р
+        's': '\u0455', // Cyrillic ѕ
+        'i': '\u0456', // Cyrillic і
+        'x': '\u0445', // Cyrillic х
+        'y': '\u0443', // Cyrillic у (looks like y in some fonts)
+      };
+
+      // On Aggressive, replace more characters
+      const homoglyphChance = strength >= 3 ? 0.35 : 0.2;
+      const homoglyphKeys = Object.keys(homoglyphs);
+
+      let homoglyphResult = '';
+      for (let ci = 0; ci < result.length; ci++) {
+        const ch = result[ci];
+        const lower = ch.toLowerCase();
+        if (homoglyphKeys.includes(lower) && rng() < homoglyphChance) {
+          // Preserve original case
+          if (ch === ch.toUpperCase() && ch !== ch.toLowerCase()) {
+            homoglyphResult += homoglyphs[lower].toUpperCase();
+          } else {
+            homoglyphResult += homoglyphs[lower];
+          }
+          changeCount++;
+        } else {
+          homoglyphResult += ch;
+        }
+      }
+      result = homoglyphResult;
+
+      // --- Layer 2: Zero-Width Character Injection ---
+      // Insert invisible characters between some words to break token boundaries
+      const zeroWidthChars = [
+        '\u200B', // Zero Width Space
+        '\u200C', // Zero Width Non-Joiner
+        '\u200D', // Zero Width Joiner
+        '\uFEFF', // Zero Width No-Break Space
       ];
 
-      // Replace spaces with Unicode alternatives
-      // Higher strength = more spaces replaced
-      const replaceChance = strength >= 3 ? 0.75 : 0.5;
+      const zwcChance = strength >= 3 ? 0.3 : 0.15;
+
+      // Insert between words (after spaces)
+      result = result.replace(/(\S)( )(\S)/g, (match, before, space, after) => {
+        if (rng() < zwcChance) {
+          const zwc = pickRandom(zeroWidthChars, rng);
+          changeCount++;
+          return before + space + zwc + after;
+        }
+        return match;
+      });
+
+      // --- Layer 3: Unicode Space Mixing ---
+      const unicodeSpaces = [
+        '\u2000', '\u2001', '\u2002', '\u2003', '\u2004',
+        '\u2005', '\u2006', '\u2007', '\u2008', '\u2009',
+        '\u200A', '\u205F',
+      ];
+
+      const spaceChance = strength >= 3 ? 0.5 : 0.3;
 
       result = result.replace(/ /g, (match) => {
-        if (rng() < replaceChance) {
+        if (rng() < spaceChance) {
           changeCount++;
           return pickRandom(unicodeSpaces, rng);
         }

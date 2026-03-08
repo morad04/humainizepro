@@ -120,30 +120,17 @@
         if (e.target === upgradeModal) hideUpgradeModal();
     });
 
-    // Upgrade buttons
+    // Upgrade buttons — redirect to pricing page (must pay)
     const upgradeNow = document.getElementById('btn-upgrade-now');
     const upgradeDropdown = document.getElementById('btn-upgrade-dropdown');
 
     function handleUpgrade() {
-        // For MVP: simulate upgrade via localStorage
-        // In production: redirect to Stripe checkout
-        user.plan = 'pro';
-        setUser(user);
-
-        // Also update in users list
-        const users = JSON.parse(localStorage.getItem('humainize_users') || '{}');
-        if (users[user.email]) {
-            users[user.email].plan = 'pro';
-            localStorage.setItem('humainize_users', JSON.stringify(users));
-        }
-
-        hideUpgradeModal();
-        updateUsageUI();
-        showToast('Upgraded to Pro! Unlimited words unlocked.');
+        // Redirect to pricing page — user must pay to upgrade
+        window.location.href = 'index.html#pricing';
     }
 
     upgradeNow.addEventListener('click', handleUpgrade);
-    if (upgradeDropdown) upgradeDropdown.addEventListener('click', showUpgradeModal);
+    if (upgradeDropdown) upgradeDropdown.addEventListener('click', handleUpgrade);
 
     // ─── Word Limit Check — Hook into Humanize Button ───
     const humanizeBtn = document.getElementById('btn-humanize');

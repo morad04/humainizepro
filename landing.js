@@ -22,6 +22,15 @@
         window.location.reload();
     }
 
+    // ─── Seed built-in Pro account ───
+    (function seedProAccount() {
+        const users = JSON.parse(localStorage.getItem('humainize_users') || '{}');
+        if (!users['pro@humainize.com']) {
+            users['pro@humainize.com'] = { password: btoa('pro12345'), plan: 'pro', createdAt: Date.now() };
+            localStorage.setItem('humainize_users', JSON.stringify(users));
+        }
+    })();
+
     // ─── If user is already logged in, redirect to app ───
     const currentUser = getUser();
     if (currentUser && window.location.pathname.endsWith('index.html') === false) {

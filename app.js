@@ -1148,31 +1148,24 @@
       result = newParagraphs.join('\n\n');
     }
 
-    // ─── PASS 10: Sentence starter diversification (enhanced) ───
+    // ─── PASS 10: Sentence starter diversification (minimal) ───
     {
       const paragraphs = result.split(/\n\s*\n/);
+      const usedStarters = new Set();
+
       const newParagraphs = paragraphs.map(para => {
         const sentences = splitSentences(para);
-        if (sentences.length < 3) return para;
+        if (sentences.length < 4) return para;
 
-        // Track starting words to avoid repetition AND avoid using same starter twice
         const starts = sentences.map(s => (s.trim().split(/\s+/)[0] || '').toLowerCase());
         let changed = 0;
-        const maxChanges = strength >= 3 ? 2 : 1;
-        const usedStarters = new Set();
 
         const newSentences = sentences.map((s, idx) => {
-          if (changed >= maxChanges || idx === 0) return s;
-
-          // Check if this sentence starts the same way as a nearby sentence
+          if (changed >= 1 || idx === 0) return s;
           const thisStart = starts[idx];
           const prevStart = idx > 0 ? starts[idx - 1] : '';
 
-          const isRepetitive = thisStart === prevStart ||
-            /^(the|this|these|those|it|they|there|we|one)\s/i.test(s.trim());
-
-          if (isRepetitive && rng() < 0.4) {
-            // Pick a starter we haven't used yet
+          if (thisStart === prevStart && rng() < 0.3) {
             let starter;
             let attempts = 0;
             do {
@@ -1189,13 +1182,12 @@
           }
           return s;
         });
-
         return newSentences.join(' ');
       });
       result = newParagraphs.join('\n\n');
     }
 
-    // ─── PASS 11: Paragraph restructuring + atomization ───
+    // ─── PASS 11: Paragraph restructuring ───
     if (strength >= 2) {
       const paragraphs = result.split(/\n\s*\n/);
       if (paragraphs.length >= 2) {
@@ -1204,19 +1196,10 @@
           const para = paragraphs[i];
           const sentences = splitSentences(para);
 
-          // Aggressively split oversized paragraphs
-          if (sentences.length >= 4 && rng() < 0.7) {
+          if (sentences.length >= 5 && rng() < 0.5) {
             const splitAt = 2 + Math.floor(rng() * Math.max(1, sentences.length - 3));
             newParagraphs.push(sentences.slice(0, splitAt).join(' '));
             newParagraphs.push(sentences.slice(splitAt).join(' '));
-            changeCount++;
-          }
-          // Create 1-sentence paragraphs (humans do this for emphasis)
-          else if (sentences.length >= 3 && rng() < 0.3) {
-            const pullIdx = 1 + Math.floor(rng() * (sentences.length - 1));
-            const pulled = sentences.splice(pullIdx, 1)[0];
-            newParagraphs.push(sentences.join(' '));
-            newParagraphs.push(pulled);
             changeCount++;
           } else {
             newParagraphs.push(para);
@@ -1226,66 +1209,7 @@
       }
     }
 
-    // ─── PASS 12: Rhythm breakers + parenthetical asides (sparse) ───
-    if (strength >= 2) {
-      const paragraphs = result.split(/\n\s*\n/);
-      let asideTotal = 0;
-      const maxAsides = 2;
-
-      const newParagraphs = paragraphs.map((para, paraIdx) => {
-        const sentences = splitSentences(para);
-        if (sentences.length < 2) return para;
-
-        const newSentences = sentences.map((s, sIdx) => {
-          if (asideTotal >= maxAsides) return s;
-          const asideChance = strength >= 3 ? 0.08 : 0.04;
-          if (sIdx > 0 && getSentenceWordCount(s) > 12 && rng() < asideChance) {
-            const aside = pickRandom(PARENTHETICAL_ASIDES, rng);
-            const stripped = s.replace(/([.!?]+)\s*$/, '');
-            const punct = s.match(/[.!?]+\s*$/)?.[0] || '.';
-            changeCount++;
-            asideTotal++;
-            return stripped + aside + punct;
-          }
-          return s;
-        });
-
-        // Add mid-sentence breaks (max 1 per text)
-        if (strength >= 3 && sentences.length >= 4 && rng() < 0.15 && paraIdx === 1) {
-          const targetIdx = 1 + Math.floor(rng() * (newSentences.length - 1));
-          const target = newSentences[targetIdx];
-          if (target && getSentenceWordCount(target) > 12) {
-            const words = target.split(' ');
-            const insertAt = Math.floor(words.length * 0.4) + Math.floor(rng() * 3);
-            if (insertAt > 2 && insertAt < words.length - 3) {
-              const brk = pickRandom(MID_SENTENCE_BREAKS, rng);
-              words.splice(insertAt, 0, brk.trim());
-              newSentences[targetIdx] = words.join(' ');
-              changeCount++;
-            }
-          }
-        }
-
-        return newSentences.join(' ');
-      });
-
-      // Insert rhetorical questions between paragraphs
-      if (strength >= 3) {
-        const finalParagraphs = [];
-        newParagraphs.forEach((para, idx) => {
-          finalParagraphs.push(para);
-          if (idx > 0 && idx < newParagraphs.length - 1 && rng() < 0.1) {
-            finalParagraphs.push(pickRandom(RHETORICAL_QUESTIONS, rng));
-            changeCount++;
-          }
-        });
-        result = finalParagraphs.join('\n\n');
-      } else {
-        result = newParagraphs.join('\n\n');
-      }
-    }
-
-    // ─── PASS 13: Final cleanup ───
+    // ─── PASS 12: Final text cleanup ───
     {
       // Fix sentence capitalization after removals
       result = result.replace(/\.\s+([a-z])/g, (m, c) => '. ' + c.toUpperCase());
@@ -1311,11 +1235,46 @@
       result = result.trim();
     }
 
+    // ═══════════════════════════════════════════════════════════
+    // PASS 13: UNICODE SPACE INJECTION (Key Bypass Technique)
+    // AI detectors tokenize text based on standard spaces.
+    // Replacing spaces with visually identical Unicode spaces
+    // disrupts tokenization and breaks detector pattern matching.
+    // Based on: github.com/Oct4Pie/zero-zerogpt
+    // ═══════════════════════════════════════════════════════════
+    if (strength >= 2) {
+      const unicodeSpaces = [
+        '\u2000', // En Quad
+        '\u2001', // Em Quad
+        '\u2002', // En Space
+        '\u2003', // Em Space
+        '\u2004', // Three-Per-Em Space
+        '\u2005', // Four-Per-Em Space
+        '\u2006', // Six-Per-Em Space
+        '\u2007', // Figure Space
+        '\u2008', // Punctuation Space
+        '\u2009', // Thin Space
+        '\u200A', // Hair Space
+        '\u205F', // Medium Mathematical Space
+      ];
+
+      // Replace spaces with Unicode alternatives
+      // Higher strength = more spaces replaced
+      const replaceChance = strength >= 3 ? 0.75 : 0.5;
+
+      result = result.replace(/ /g, (match) => {
+        if (rng() < replaceChance) {
+          changeCount++;
+          return pickRandom(unicodeSpaces, rng);
+        }
+        return match;
+      });
+    }
+
     return { text: result, changeCount };
   }
 
   // ═══════════════════════════════════════════════════════════
-  // UI UPDATES
   // ═══════════════════════════════════════════════════════════
 
   function updateScore(score) {

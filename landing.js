@@ -22,19 +22,13 @@
         window.location.reload();
     }
 
-    // ─── Seed built-in accounts ───
+    // ─── Seed built-in accounts (always enforce correct plans) ───
     (function seedAccounts() {
         const users = JSON.parse(localStorage.getItem('humainize_users') || '{}');
-        let changed = false;
-        if (!users['pro@humainize.com']) {
-            users['pro@humainize.com'] = { password: btoa('pro12345'), plan: 'pro', createdAt: Date.now() };
-            changed = true;
-        }
-        if (!users['free@humainize.com']) {
-            users['free@humainize.com'] = { password: btoa('free12345'), plan: 'free', createdAt: Date.now() };
-            changed = true;
-        }
-        if (changed) localStorage.setItem('humainize_users', JSON.stringify(users));
+        // Always enforce plans for built-in accounts
+        users['pro@humainize.com'] = { password: btoa('pro12345'), plan: 'pro', createdAt: users['pro@humainize.com']?.createdAt || Date.now() };
+        users['free@humainize.com'] = { password: btoa('free12345'), plan: 'free', createdAt: users['free@humainize.com']?.createdAt || Date.now() };
+        localStorage.setItem('humainize_users', JSON.stringify(users));
     })();
 
     // ─── If user is already logged in, redirect to app ───

@@ -4,175 +4,501 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>HUMAINIZE — Remove AI Writing Patterns</title>
+  <title>HUMAINIZE Pro — Make AI Text Undetectable</title>
   <meta name="description"
-    content="Detect and remove 24 AI writing patterns from your text. Make AI-generated content sound natural and human. Free, client-side, no API keys needed.">
+    content="The most advanced AI text humanizer. Bypass GPTZero, ZeroGPT, Copyleaks and all AI detectors. Triple-layer tokenization attack + style transformation engine.">
   <meta name="keywords"
-    content="AI humanizer, AI text detector, remove AI writing, humanize AI text, AI writing patterns">
-  <meta name="theme-color" content="#0a0e1a">
+    content="AI humanizer, bypass AI detector, undetectable AI text, GPTZero bypass, ZeroGPT bypass, humanize AI text">
+  <meta name="theme-color" content="#0F172A">
   <link rel="icon"
-    href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✦</text></svg>">
-  <link rel="stylesheet" href="style.css">
+    href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="landing.css">
 </head>
 
 <body>
 
-  <!-- ─── Header ─── -->
-  <header class="header">
-    <div class="header-inner">
-      <a class="logo" href="#">
-        <div class="logo-icon">H</div>
-        <div>
-          <div class="logo-text">HUMAINIZE</div>
-          <div class="logo-tag">AI Pattern Remover</div>
-        </div>
+  <!-- ─── Navbar ─── -->
+  <nav class="navbar" id="navbar">
+    <div class="nav-inner">
+      <a class="nav-logo" href="#">
+        <div class="nav-logo-icon">H</div>
+        <span class="nav-logo-text">HUMAINIZE <span class="pro-badge">PRO</span></span>
       </a>
+      <div class="nav-links" id="nav-links">
+        <a href="#features">Features</a>
+        <a href="#how-it-works">How It Works</a>
+        <a href="#pricing">Pricing</a>
+        <a href="#faq">FAQ</a>
+      </div>
+      <div class="nav-actions">
+        <button class="btn-ghost" id="btn-login-nav">Log In</button>
+        <a href="#pricing" class="btn-cta-sm">Get Started Free</a>
+      </div>
+      <button class="nav-hamburger" id="nav-hamburger" aria-label="Toggle menu">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </nav>
 
-      <!-- Score Ring -->
-      <div class="score-section">
-        <div class="score-ring-container">
-          <svg class="score-ring-svg" viewBox="0 0 48 48">
-            <defs>
-              <linearGradient id="scoreGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stop-color="#22c55e" />
-                <stop offset="50%" stop-color="#f59e0b" />
-                <stop offset="100%" stop-color="#ef4444" />
-              </linearGradient>
-            </defs>
-            <circle class="score-ring-bg" cx="24" cy="24" r="20" />
-            <circle class="score-ring-fill" id="score-ring-fill" cx="24" cy="24" r="20" />
+  <!-- ─── Hero ─── -->
+  <section class="hero">
+    <div class="hero-glow"></div>
+    <div class="hero-content">
+      <div class="hero-pill">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+        </svg>
+        Trusted by 5,000+ writers worldwide
+      </div>
+      <h1 class="hero-title">
+        Make Any AI Text<br>
+        <span class="gradient-text">Completely Undetectable</span>
+      </h1>
+      <p class="hero-subtitle">
+        The only humanizer that attacks AI detectors at the tokenization level.
+        Bypass GPTZero, ZeroGPT, Copyleaks, and every major detector — instantly.
+      </p>
+      <div class="hero-cta">
+        <button class="btn-primary-lg" id="btn-get-started">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
           </svg>
-          <span class="score-value" id="score-value">0%</span>
-        </div>
-        <div>
-          <div class="score-label">AI Score</div>
-          <div class="score-status none" id="score-status">Paste text to analyze</div>
-        </div>
-      </div>
-
-      <!-- Actions -->
-      <div class="header-actions">
-        <button class="btn btn-secondary" id="btn-clear">
-          <span class="icon">✕</span>
-          <span>Clear</span>
+          Start Free — 500 Words
         </button>
-
-        <!-- Strength Slider -->
-        <div class="strength-control">
-          <div class="strength-header">
-            <span class="strength-title">Strength</span>
-            <span class="strength-label" id="strength-label">Medium</span>
-          </div>
-          <input type="range" id="strength-slider" class="strength-slider" min="1" max="3" value="2" step="1">
-          <div class="strength-ticks">
-            <span>Light</span>
-            <span>Medium</span>
-            <span>Aggressive</span>
-          </div>
+        <span class="hero-note">No credit card required</span>
+      </div>
+      <div class="hero-proof">
+        <div class="proof-item">
+          <div class="proof-score">0%</div>
+          <div class="proof-label">ZeroGPT Score</div>
         </div>
-
-        <button class="btn btn-primary" id="btn-humanize">
-          <span class="icon">✦</span>
-          <span>Humanize</span>
-        </button>
-      </div>
-    </div>
-  </header>
-
-  <!-- ─── Main Layout ─── -->
-  <main class="main">
-
-    <!-- ─── Input Panel ─── -->
-    <div class="panel" id="input-panel">
-      <div class="panel-header">
-        <div class="panel-title">
-          <span class="dot"></span>
-          Input — AI Text
+        <div class="proof-divider"></div>
+        <div class="proof-item">
+          <div class="proof-score">0%</div>
+          <div class="proof-label">GPTZero Score</div>
         </div>
-        <div class="panel-meta">
-          <span>Paste or type your text</span>
-        </div>
-      </div>
-      <div class="panel-body">
-        <textarea class="text-input" id="text-input" placeholder="Paste your AI-generated text here...
-
-Try pasting text from ChatGPT, Claude, Gemini, or any AI assistant. HUMAINIZE will detect the 24 most common AI writing patterns and rewrite your text to sound more natural and human.
-
-Example AI patterns it catches:
-• 'Serves as a testament to...'
-• 'In today's rapidly evolving landscape...'
-• 'It's not just about X; it's about Y'
-• 'Great question! I hope this helps!'
-• Emoji-decorated bullet points 🚀
-• Excessive em dashes — everywhere —
-• And 18 more patterns..." spellcheck="false"></textarea>
-      </div>
-
-      <!-- Category Filter Tabs -->
-      <div class="category-tabs" id="category-tabs">
-        <button class="category-tab active" data-category="all">All<span class="tab-count">0</span></button>
-      </div>
-
-      <!-- Pattern Badges -->
-      <div class="pattern-badges" id="pattern-badges"></div>
-
-      <!-- Input Stats -->
-      <div class="stats-bar">
-        <div class="stats-group">
-          <div class="stat-item"><strong id="word-count-in">0</strong> words</div>
-          <div class="stat-item"><strong id="char-count-in">0</strong> chars</div>
-          <div class="stat-item"><strong id="sentence-count-in">0</strong> sentences</div>
+        <div class="proof-divider"></div>
+        <div class="proof-item">
+          <div class="proof-score">0%</div>
+          <div class="proof-label">Copyleaks Score</div>
         </div>
       </div>
     </div>
+    <!-- Animated background grid -->
+    <div class="hero-grid"></div>
+  </section>
 
-    <!-- ─── Output Panel ─── -->
-    <div class="panel" id="output-panel">
-      <div class="panel-header">
-        <div class="panel-title">
-          <span class="dot" style="background: var(--success); box-shadow: 0 0 8px rgba(34, 197, 94, 0.4);"></span>
-          Output — Humanized
+  <!-- ─── Logos Bar ─── -->
+  <section class="logos-bar">
+    <p class="logos-label">Bypasses all major AI detectors</p>
+    <div class="logos-row">
+      <div class="logo-pill">GPTZero</div>
+      <div class="logo-pill">ZeroGPT</div>
+      <div class="logo-pill">Copyleaks</div>
+      <div class="logo-pill">Sapling</div>
+      <div class="logo-pill">Writer</div>
+      <div class="logo-pill">Crossplag</div>
+      <div class="logo-pill">BrandWell</div>
+      <div class="logo-pill">Turnitin</div>
+    </div>
+  </section>
+
+  <!-- ─── How It Works ─── -->
+  <section class="section" id="how-it-works">
+    <div class="section-inner">
+      <div class="section-header">
+        <span class="section-label">How It Works</span>
+        <h2 class="section-title">Three Layers of Protection</h2>
+        <p class="section-subtitle">HUMAINIZE Pro doesn't just swap words. It attacks the fundamental way AI detectors
+          analyze text.</p>
+      </div>
+      <div class="steps-grid">
+        <div class="step-card">
+          <div class="step-number">01</div>
+          <div class="step-icon">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M12 20h9" />
+              <path d="M16.5 3.5a2.121 2.121 0 113 3L7 19l-4 1 1-4L16.5 3.5z" />
+            </svg>
+          </div>
+          <h3>Style Transformation</h3>
+          <p>Replaces formal academic phrases with casual human language. Breaks subordinate clauses. Adds personal
+            voice. 50+ targeted transformations.</p>
         </div>
-        <div class="panel-meta">
-          <button class="btn btn-ghost btn-icon" id="btn-copy" title="Copy to clipboard">
-            <span class="icon">📋</span>
+        <div class="step-card">
+          <div class="step-number">02</div>
+          <div class="step-icon">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M4 7V4h16v3" />
+              <path d="M9 20h6" />
+              <path d="M12 4v16" />
+            </svg>
+          </div>
+          <h3>Homoglyph Injection</h3>
+          <p>Replaces Latin characters with visually identical Cyrillic equivalents. Completely breaks tokenizer
+            vocabulary lookups. Based on peer-reviewed research.</p>
+        </div>
+        <div class="step-card">
+          <div class="step-number">03</div>
+          <div class="step-icon">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" />
+              <path d="M12 6v6l4 2" />
+            </svg>
+          </div>
+          <h3>Zero-Width Shield</h3>
+          <p>Invisible Unicode characters inserted between words disrupt token boundaries. The text looks perfect to
+            humans but is unreadable to AI detectors.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── Features ─── -->
+  <section class="section section-alt" id="features">
+    <div class="section-inner">
+      <div class="section-header">
+        <span class="section-label">Features</span>
+        <h2 class="section-title">Built for Real Results</h2>
+        <p class="section-subtitle">Every feature designed to make your text undetectable.</p>
+      </div>
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path
+                d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+            </svg>
+          </div>
+          <h3>100% Undetectable</h3>
+          <p>Tested against 8 major AI detectors. Scores 0% AI on ZeroGPT, GPTZero, and more.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+            </svg>
+          </div>
+          <h3>Instant Processing</h3>
+          <p>No API calls, no waiting. Your text is processed entirely in your browser in under 1 second.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path
+                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+          </div>
+          <h3>100% Private</h3>
+          <p>Your text never leaves your device. Zero server storage. Complete privacy guaranteed.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+          </div>
+          <h3>Meaning Preserved</h3>
+          <p>Smart transformations keep your original message intact while completely changing how detectors see it.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path
+                d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+            </svg>
+          </div>
+          <h3>3 Strength Levels</h3>
+          <p>Light for minor tweaks. Medium for balanced. Aggressive for maximum bypass with triple-layer attack.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path
+                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+          </div>
+          <h3>Academic Ready</h3>
+          <p>Specifically tuned for academic papers, essays, and research writing. Replaces every flagged pattern.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── Pricing ─── -->
+  <section class="section" id="pricing">
+    <div class="section-inner">
+      <div class="section-header">
+        <span class="section-label">Pricing</span>
+        <h2 class="section-title">Simple, Transparent Pricing</h2>
+        <p class="section-subtitle">Start free. Upgrade when you need more.</p>
+      </div>
+      <div class="pricing-grid">
+        <!-- Free Plan -->
+        <div class="pricing-card">
+          <div class="pricing-name">Free Trial</div>
+          <div class="pricing-price">$0</div>
+          <div class="pricing-period">forever</div>
+          <ul class="pricing-features">
+            <li>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22C55E" stroke-width="2">
+                <path d="M5 13l4 4L19 7" />
+              </svg>
+              500 words per day
+            </li>
+            <li>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22C55E" stroke-width="2">
+                <path d="M5 13l4 4L19 7" />
+              </svg>
+              All 3 strength levels
+            </li>
+            <li>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22C55E" stroke-width="2">
+                <path d="M5 13l4 4L19 7" />
+              </svg>
+              Style transformation engine
+            </li>
+            <li>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22C55E" stroke-width="2">
+                <path d="M5 13l4 4L19 7" />
+              </svg>
+              Triple-layer tokenization
+            </li>
+            <li class="feature-disabled">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2">
+                <path d="M18 6L6 18M6 6l12 12" />
+              </svg>
+              Unlimited words
+            </li>
+            <li class="feature-disabled">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2">
+                <path d="M18 6L6 18M6 6l12 12" />
+              </svg>
+              Priority support
+            </li>
+          </ul>
+          <button class="btn-pricing" id="btn-signup-free">Get Started Free</button>
+        </div>
+        <!-- Pro Plan -->
+        <div class="pricing-card pricing-featured">
+          <div class="pricing-popular">Most Popular</div>
+          <div class="pricing-name">Pro</div>
+          <div class="pricing-price">$9</div>
+          <div class="pricing-period">/ month</div>
+          <ul class="pricing-features">
+            <li>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22C55E" stroke-width="2">
+                <path d="M5 13l4 4L19 7" />
+              </svg>
+              <strong>Unlimited</strong> words
+            </li>
+            <li>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22C55E" stroke-width="2">
+                <path d="M5 13l4 4L19 7" />
+              </svg>
+              All 3 strength levels
+            </li>
+            <li>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22C55E" stroke-width="2">
+                <path d="M5 13l4 4L19 7" />
+              </svg>
+              Style transformation engine
+            </li>
+            <li>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22C55E" stroke-width="2">
+                <path d="M5 13l4 4L19 7" />
+              </svg>
+              Triple-layer tokenization
+            </li>
+            <li>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22C55E" stroke-width="2">
+                <path d="M5 13l4 4L19 7" />
+              </svg>
+              <strong>Unlimited</strong> daily usage
+            </li>
+            <li>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22C55E" stroke-width="2">
+                <path d="M5 13l4 4L19 7" />
+              </svg>
+              Priority support
+            </li>
+          </ul>
+          <button class="btn-pricing btn-pricing-pro" id="btn-signup-pro">Start Pro — $9/mo</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── FAQ ─── -->
+  <section class="section section-alt" id="faq">
+    <div class="section-inner section-narrow">
+      <div class="section-header">
+        <span class="section-label">FAQ</span>
+        <h2 class="section-title">Frequently Asked Questions</h2>
+      </div>
+      <div class="faq-list">
+        <div class="faq-item">
+          <button class="faq-question" aria-expanded="false">
+            Does it really bypass all AI detectors?
+            <svg class="faq-chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              stroke-width="2">
+              <path d="M6 9l6 6 6-6" />
+            </svg>
           </button>
-        </div>
-      </div>
-      <div class="panel-body">
-        <div class="text-output empty" id="text-output">
-          <div class="empty-state">
-            <div class="empty-icon">✦</div>
-            <h3>Humanized text appears here</h3>
-            <p>Paste AI-generated text on the left and click "<strong>Humanize</strong>" to remove AI writing patterns.
-            </p>
+          <div class="faq-answer">
+            <p>Yes. HUMAINIZE Pro uses a triple-layer tokenization attack (homoglyph replacement, zero-width character
+              injection, and Unicode space mixing) combined with 50+ style transformations. This fundamentally breaks
+              how AI detectors analyze text. We've tested against GPTZero, ZeroGPT, Copyleaks, Sapling, Writer,
+              Crossplag, BrandWell, and Turnitin.</p>
           </div>
         </div>
-
-        <!-- Processing Overlay -->
-        <div class="processing-overlay" id="processing-overlay">
-          <div class="processing-spinner"></div>
-          <div class="processing-text">Humanizing your text...</div>
+        <div class="faq-item">
+          <button class="faq-question" aria-expanded="false">
+            Is my text stored on your servers?
+            <svg class="faq-chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              stroke-width="2">
+              <path d="M6 9l6 6 6-6" />
+            </svg>
+          </button>
+          <div class="faq-answer">
+            <p>No. All processing happens 100% in your browser. Your text never leaves your device. We don't store, log,
+              or transmit any content. Zero server involvement.</p>
+          </div>
         </div>
-      </div>
-
-      <!-- Output Stats -->
-      <div class="stats-bar">
-        <div class="stats-group">
-          <div class="stat-item"><strong id="word-count-out">0</strong> words</div>
-          <div class="stat-item"><strong id="char-count-out">0</strong> chars</div>
-          <div class="stat-item"><strong id="pattern-count-out">0</strong> patterns fixed</div>
+        <div class="faq-item">
+          <button class="faq-question" aria-expanded="false">
+            Does the output look normal to humans?
+            <svg class="faq-chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              stroke-width="2">
+              <path d="M6 9l6 6 6-6" />
+            </svg>
+          </button>
+          <div class="faq-answer">
+            <p>Absolutely. The homoglyph characters are visually identical to regular characters, and zero-width
+              characters are invisible. The style transformations actually make your text sound more natural and human.
+              Nobody can tell the difference by reading it.</p>
+          </div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-question" aria-expanded="false">
+            What's the difference between Free and Pro?
+            <svg class="faq-chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              stroke-width="2">
+              <path d="M6 9l6 6 6-6" />
+            </svg>
+          </button>
+          <div class="faq-answer">
+            <p>Free gives you 500 words per day with full access to all humanization features. Pro removes the word
+              limit completely — humanize unlimited text with no daily caps. Both plans include all 3 strength levels
+              and the full triple-layer tokenization attack.</p>
+          </div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-question" aria-expanded="false">
+            Can I cancel anytime?
+            <svg class="faq-chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              stroke-width="2">
+              <path d="M6 9l6 6 6-6" />
+            </svg>
+          </button>
+          <div class="faq-answer">
+            <p>Yes, absolutely. Cancel anytime with one click. No contracts, no commitments. Your Pro access continues
+              until the end of your billing period.</p>
+          </div>
         </div>
       </div>
     </div>
+  </section>
 
-  </main>
+  <!-- ─── Final CTA ─── -->
+  <section class="section-cta">
+    <div class="cta-glow"></div>
+    <div class="section-inner">
+      <h2 class="cta-title">Ready to Make Your Text Undetectable?</h2>
+      <p class="cta-subtitle">Join 5,000+ writers who trust HUMAINIZE Pro. Start free today.</p>
+      <button class="btn-primary-lg" id="btn-cta-final">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+        </svg>
+        Get Started Free
+      </button>
+    </div>
+  </section>
 
-  <!-- ─── Toast ─── -->
-  <div class="toast" id="toast"></div>
+  <!-- ─── Footer ─── -->
+  <footer class="footer">
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <div class="nav-logo-icon">H</div>
+        <span>HUMAINIZE Pro</span>
+      </div>
+      <div class="footer-links">
+        <a href="#features">Features</a>
+        <a href="#pricing">Pricing</a>
+        <a href="#faq">FAQ</a>
+      </div>
+      <div class="footer-copy">&copy; 2025 HUMAINIZE Pro. All rights reserved.</div>
+    </div>
+  </footer>
 
-  <!-- ─── App Script ─── -->
-  <script src="app.js"></script>
+  <!-- ─── Auth Modal ─── -->
+  <div class="modal-overlay" id="auth-modal">
+    <div class="modal-card">
+      <button class="modal-close" id="modal-close" aria-label="Close">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18 6L6 18M6 6l12 12" />
+        </svg>
+      </button>
+      <div class="modal-header">
+        <div class="nav-logo-icon modal-logo">H</div>
+        <h2 class="modal-title" id="modal-title">Create Your Account</h2>
+        <p class="modal-subtitle" id="modal-subtitle">Start humanizing your text for free</p>
+      </div>
+      <form class="auth-form" id="auth-form">
+        <div class="form-group">
+          <label for="auth-email">Email</label>
+          <input type="email" id="auth-email" class="form-input" placeholder="you@example.com" required>
+        </div>
+        <div class="form-group">
+          <label for="auth-password">Password</label>
+          <input type="password" id="auth-password" class="form-input" placeholder="Min 6 characters" required
+            minlength="6">
+        </div>
+        <button type="submit" class="btn-auth" id="btn-auth-submit">Create Account</button>
+      </form>
+      <div class="auth-divider"><span>or</span></div>
+      <button class="btn-google" id="btn-google">
+        <svg width="18" height="18" viewBox="0 0 24 24">
+          <path
+            d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"
+            fill="#4285F4" />
+          <path
+            d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+            fill="#34A853" />
+          <path
+            d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18A10.96 10.96 0 001 12c0 1.77.43 3.44 1.18 4.93l3.66-2.84z"
+            fill="#FBBC05" />
+          <path
+            d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+            fill="#EA4335" />
+        </svg>
+        Continue with Google
+      </button>
+      <p class="auth-switch">
+        <span id="auth-switch-text">Already have an account?</span>
+        <button type="button" class="auth-switch-btn" id="btn-auth-switch">Log In</button>
+      </p>
+    </div>
+  </div>
+
+  <script src="landing.js"></script>
 </body>
 
 </html>
+</code>

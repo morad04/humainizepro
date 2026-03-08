@@ -516,14 +516,10 @@
   // ═══════════════════════════════════════════════════════════
 
   const HUMAN_STARTERS = [
-    'Honestly, ', 'Frankly, ', 'Look, ', 'The thing is, ', 'In practice, ',
-    'From what I can tell, ', 'Realistically, ', 'The way I see it, ',
-    'To be fair, ', 'In my experience, ', 'For what it\'s worth, ',
-    'Here\'s the thing: ', 'Worth noting: ', 'Funny enough, ',
-    'Interestingly, ', 'Surprisingly, ', 'Oddly enough, ',
-    'As it turns out, ', 'The reality is, ', 'Put simply, ',
-    'What people miss is that ', 'The catch is that ', 'Fair point, but ',
-    'Granted, ', 'Sure, ', 'True, ', 'That said, ', 'Mind you, ',
+    'In practice, ', 'Realistically, ', 'To be fair, ',
+    'For what it\'s worth, ', 'Interestingly, ',
+    'As it turns out, ', 'Put simply, ',
+    'That said, ', 'Granted, ', 'Still, ', 'Then again, ',
   ];
 
   // ═══════════════════════════════════════════════════════════
@@ -552,19 +548,11 @@
   // ═══════════════════════════════════════════════════════════
 
   const PARENTHETICAL_ASIDES = [
-    ' (at least in theory)',
-    ' (or so the thinking goes)',
-    ' (which makes sense, if you think about it)',
-    ' (to be fair)',
-    ' (probably)',
-    ' (or close to it)',
-    ' (give or take)',
-    ' (broadly speaking)',
-    ' (for better or worse)',
-    ' (depending on who you ask)',
-    ' (in theory, anyway)',
-    ' (not always, but often)',
-    ' (more or less)',
+    ' (to some degree)',
+    ' (at least in principle)',
+    ' (though not always)',
+    ' (to varying degrees)',
+    ' (with some exceptions)',
   ];
 
   const MID_SENTENCE_BREAKS = [
@@ -735,16 +723,15 @@
   // --- Additional data for new passes ---
 
   const FIRST_PERSON_INJECTIONS = [
-    'I think ', 'I believe ', 'I\'d say ', 'From what I\'ve seen, ',
-    'In my experience, ', 'The way I see it, ', 'I\'ve noticed that ',
-    'I\'d argue that ', 'If you ask me, ', 'Personally, I think ',
-    'From my perspective, ', 'I\'ve found that ',
+    'From what I\'ve seen, ',
+    'In my experience, ',
+    'I\'d argue that ',
+    'From my perspective, ',
   ];
 
   const NATURAL_DISFLUENCIES = [
-    'sort of ', 'kind of ', 'pretty much ', 'more or less ',
-    'basically ', 'essentially ', 'you know, ', 'I mean, ',
-    'in a way, ', 'to some extent, ',
+    'largely ', 'often ', 'typically ', 'generally ',
+    'in many cases ', 'for the most part ',
   ];
 
   const COLLOQUIAL_PHRASES = [
@@ -996,21 +983,21 @@
       });
     }
 
-    // ─── PASS 7: First-person voice injection ───
-    // AI NEVER uses first person. This is one of the strongest signals.
-    if (strength >= 2) {
+    // ─── PASS 7: First-person voice injection (sparse) ───
+    // Only 1-2 per entire text to avoid creating a new pattern
+    if (strength >= 3) {
       const paragraphs = result.split(/\n\s*\n/);
       let injectCount = 0;
-      const maxInjects = strength >= 3 ? Math.ceil(paragraphs.length * 0.6) : Math.ceil(paragraphs.length * 0.3);
+      const maxInjects = 2;
 
       const newParagraphs = paragraphs.map((para, pIdx) => {
         if (injectCount >= maxInjects) return para;
+        if (pIdx === 0) return para; // skip first paragraph
         const sentences = splitSentences(para);
-        if (sentences.length < 2) return para;
+        if (sentences.length < 3) return para;
 
-        // Pick a sentence to add first-person to (not the very first sentence)
-        const targetIdx = 1 + Math.floor(rng() * Math.min(sentences.length - 1, 3));
-        if (targetIdx < sentences.length && rng() < 0.7) {
+        const targetIdx = 1 + Math.floor(rng() * Math.min(sentences.length - 2, 2));
+        if (targetIdx < sentences.length && rng() < 0.35) {
           const s = sentences[targetIdx];
           const starter = pickRandom(FIRST_PERSON_INJECTIONS, rng);
           sentences[targetIdx] = starter + s.charAt(0).toLowerCase() + s.slice(1);
@@ -1023,12 +1010,11 @@
       result = newParagraphs.join('\n\n');
     }
 
-    // ─── PASS 8: Natural disfluency injection ───
-    // Humans say "sort of", "kind of", "basically". AI never does.
+    // ─── PASS 8: Subtle word insertion (max 2 total) ───
     if (strength >= 2) {
       const paragraphs = result.split(/\n\s*\n/);
       let disCount = 0;
-      const maxDis = strength >= 3 ? 6 : 3;
+      const maxDis = 2;
 
       const newParagraphs = paragraphs.map(para => {
         if (disCount >= maxDis) return para;
@@ -1037,8 +1023,7 @@
         const newSentences = sentences.map(s => {
           if (disCount >= maxDis) return s;
           const wc = getSentenceWordCount(s);
-          if (wc > 12 && rng() < 0.2) {
-            // Insert before an adjective or after a verb
+          if (wc > 15 && rng() < 0.08) {
             const words = s.split(' ');
             const insertPos = 3 + Math.floor(rng() * Math.min(words.length - 5, 6));
             if (insertPos > 2 && insertPos < words.length - 2) {
@@ -1052,6 +1037,56 @@
           return s;
         });
 
+        return newSentences.join(' ');
+      });
+      result = newParagraphs.join('\n\n');
+    }
+
+    // ─── PASS 8b: Clause reordering (real structural change) ───
+    // Move dependent clauses to front/back of sentences
+    {
+      const paragraphs = result.split(/\n\s*\n/);
+      let reorderCount = 0;
+      const maxReorders = strength >= 3 ? 5 : 3;
+
+      const newParagraphs = paragraphs.map(para => {
+        const sentences = splitSentences(para);
+        const newSentences = sentences.map(s => {
+          if (reorderCount >= maxReorders) return s;
+          const wc = getSentenceWordCount(s);
+          if (wc < 12 || wc > 35) return s;
+
+          // Pattern: "X, Y" -> "Y. X" (move clause after comma to front)
+          const commaMatch = s.match(/^(.{15,}?),\s+(.{10,}?)([.!?])\s*$/);
+          if (commaMatch && rng() < 0.25) {
+            const [, first, second, punct] = commaMatch;
+            const reordered = second.charAt(0).toUpperCase() + second.slice(1) + '. ' +
+              first.charAt(0).toUpperCase() + first.slice(1) + punct;
+            reorderCount++;
+            changeCount++;
+            return reordered;
+          }
+
+          // Pattern: "Although X, Y" -> "Y, even though X"
+          const althoughMatch = s.match(/^Although\s+(.{10,}?),\s+(.{10,}?)([.!?])\s*$/);
+          if (althoughMatch && rng() < 0.5) {
+            const [, condition, main, punct] = althoughMatch;
+            reorderCount++;
+            changeCount++;
+            return main.charAt(0).toUpperCase() + main.slice(1) + ', even though ' + condition.charAt(0).toLowerCase() + condition.slice(1) + punct;
+          }
+
+          // Pattern: "Because X, Y" -> "Y because X"
+          const becauseMatch = s.match(/^Because\s+(.{8,}?),\s+(.{8,}?)([.!?])\s*$/);
+          if (becauseMatch && rng() < 0.5) {
+            const [, reason, main, punct] = becauseMatch;
+            reorderCount++;
+            changeCount++;
+            return main.charAt(0).toUpperCase() + main.slice(1) + ' because ' + reason.charAt(0).toLowerCase() + reason.slice(1) + punct;
+          }
+
+          return s;
+        });
         return newSentences.join(' ');
       });
       result = newParagraphs.join('\n\n');
@@ -1098,14 +1133,7 @@
             continue;
           }
 
-          // Very occasionally drop a super short sentence
-          if (strength >= 3 && rng() < 0.08 && i > 0 && i < sentences.length - 1) {
-            const shorts = ['That matters.', 'Big deal.', 'Not always.', 'Fair enough.', 'It depends.', 'Go figure.', 'Makes sense.', 'Worth noting.', 'No question.', 'Think about it.'];
-            newSentences.push(s);
-            newSentences.push(pickRandom(shorts, rng));
-            changeCount++;
-            continue;
-          }
+          // (removed: forced short sentences like 'Worth noting.' created detectable patterns)
 
           newSentences.push(s);
         }
@@ -1184,20 +1212,25 @@
       }
     }
 
-    // ─── PASS 12: Rhythm breakers + parenthetical asides ───
+    // ─── PASS 12: Rhythm breakers + parenthetical asides (sparse) ───
     if (strength >= 2) {
       const paragraphs = result.split(/\n\s*\n/);
+      let asideTotal = 0;
+      const maxAsides = 2;
+
       const newParagraphs = paragraphs.map((para, paraIdx) => {
         const sentences = splitSentences(para);
         if (sentences.length < 2) return para;
 
         const newSentences = sentences.map((s, sIdx) => {
-          const asideChance = strength >= 3 ? 0.3 : 0.15;
-          if (sIdx > 0 && getSentenceWordCount(s) > 10 && rng() < asideChance) {
+          if (asideTotal >= maxAsides) return s;
+          const asideChance = strength >= 3 ? 0.08 : 0.04;
+          if (sIdx > 0 && getSentenceWordCount(s) > 12 && rng() < asideChance) {
             const aside = pickRandom(PARENTHETICAL_ASIDES, rng);
             const stripped = s.replace(/([.!?]+)\s*$/, '');
             const punct = s.match(/[.!?]+\s*$/)?.[0] || '.';
             changeCount++;
+            asideTotal++;
             return stripped + aside + punct;
           }
           return s;

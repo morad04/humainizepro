@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HUMAINIZE — Remove AI Writing Patterns</title>
+  <meta name="description"
+    content="Detect and remove 24 AI writing patterns from your text. Make AI-generated content sound natural and human. Free, client-side, no API keys needed.">
+  <meta name="keywords"
+    content="AI humanizer, AI text detector, remove AI writing, humanize AI text, AI writing patterns">
+  <meta name="theme-color" content="#0a0e1a">
+  <link rel="icon"
+    href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✦</text></svg>">
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+  <!-- ─── Header ─── -->
+  <header class="header">
+    <div class="header-inner">
+      <a class="logo" href="#">
+        <div class="logo-icon">H</div>
+        <div>
+          <div class="logo-text">HUMAINIZE</div>
+          <div class="logo-tag">AI Pattern Remover</div>
+        </div>
+      </a>
+
+      <!-- Score Ring -->
+      <div class="score-section">
+        <div class="score-ring-container">
+          <svg class="score-ring-svg" viewBox="0 0 48 48">
+            <defs>
+              <linearGradient id="scoreGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#22c55e" />
+                <stop offset="50%" stop-color="#f59e0b" />
+                <stop offset="100%" stop-color="#ef4444" />
+              </linearGradient>
+            </defs>
+            <circle class="score-ring-bg" cx="24" cy="24" r="20" />
+            <circle class="score-ring-fill" id="score-ring-fill" cx="24" cy="24" r="20" />
+          </svg>
+          <span class="score-value" id="score-value">0%</span>
+        </div>
+        <div>
+          <div class="score-label">AI Score</div>
+          <div class="score-status none" id="score-status">Paste text to analyze</div>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="header-actions">
+        <button class="btn btn-secondary" id="btn-clear">
+          <span class="icon">✕</span>
+          <span>Clear</span>
+        </button>
+
+        <!-- Strength Slider -->
+        <div class="strength-control">
+          <div class="strength-header">
+            <span class="strength-title">Strength</span>
+            <span class="strength-label" id="strength-label">Medium</span>
+          </div>
+          <input type="range" id="strength-slider" class="strength-slider" min="1" max="3" value="2" step="1">
+          <div class="strength-ticks">
+            <span>Light</span>
+            <span>Medium</span>
+            <span>Aggressive</span>
+          </div>
+        </div>
+
+        <button class="btn btn-primary" id="btn-humanize">
+          <span class="icon">✦</span>
+          <span>Humanize</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ─── Main Layout ─── -->
+  <main class="main">
+
+    <!-- ─── Input Panel ─── -->
+    <div class="panel" id="input-panel">
+      <div class="panel-header">
+        <div class="panel-title">
+          <span class="dot"></span>
+          Input — AI Text
+        </div>
+        <div class="panel-meta">
+          <span>Paste or type your text</span>
+        </div>
+      </div>
+      <div class="panel-body">
+        <textarea class="text-input" id="text-input" placeholder="Paste your AI-generated text here...
+
+Try pasting text from ChatGPT, Claude, Gemini, or any AI assistant. HUMAINIZE will detect the 24 most common AI writing patterns and rewrite your text to sound more natural and human.
+
+Example AI patterns it catches:
+• 'Serves as a testament to...'
+• 'In today's rapidly evolving landscape...'
+• 'It's not just about X; it's about Y'
+• 'Great question! I hope this helps!'
+• Emoji-decorated bullet points 🚀
+• Excessive em dashes — everywhere —
+• And 18 more patterns..." spellcheck="false"></textarea>
+      </div>
+
+      <!-- Category Filter Tabs -->
+      <div class="category-tabs" id="category-tabs">
+        <button class="category-tab active" data-category="all">All<span class="tab-count">0</span></button>
+      </div>
+
+      <!-- Pattern Badges -->
+      <div class="pattern-badges" id="pattern-badges"></div>
+
+      <!-- Input Stats -->
+      <div class="stats-bar">
+        <div class="stats-group">
+          <div class="stat-item"><strong id="word-count-in">0</strong> words</div>
+          <div class="stat-item"><strong id="char-count-in">0</strong> chars</div>
+          <div class="stat-item"><strong id="sentence-count-in">0</strong> sentences</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── Output Panel ─── -->
+    <div class="panel" id="output-panel">
+      <div class="panel-header">
+        <div class="panel-title">
+          <span class="dot" style="background: var(--success); box-shadow: 0 0 8px rgba(34, 197, 94, 0.4);"></span>
+          Output — Humanized
+        </div>
+        <div class="panel-meta">
+          <button class="btn btn-ghost btn-icon" id="btn-copy" title="Copy to clipboard">
+            <span class="icon">📋</span>
+          </button>
+        </div>
+      </div>
+      <div class="panel-body">
+        <div class="text-output empty" id="text-output">
+          <div class="empty-state">
+            <div class="empty-icon">✦</div>
+            <h3>Humanized text appears here</h3>
+            <p>Paste AI-generated text on the left and click "<strong>Humanize</strong>" to remove AI writing patterns.
+            </p>
+          </div>
+        </div>
+
+        <!-- Processing Overlay -->
+        <div class="processing-overlay" id="processing-overlay">
+          <div class="processing-spinner"></div>
+          <div class="processing-text">Humanizing your text...</div>
+        </div>
+      </div>
+
+      <!-- Output Stats -->
+      <div class="stats-bar">
+        <div class="stats-group">
+          <div class="stat-item"><strong id="word-count-out">0</strong> words</div>
+          <div class="stat-item"><strong id="char-count-out">0</strong> chars</div>
+          <div class="stat-item"><strong id="pattern-count-out">0</strong> patterns fixed</div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ─── Toast ─── -->
+  <div class="toast" id="toast"></div>
+
+  <!-- ─── App Script ─── -->
+  <script src="app.js"></script>
+</body>
+
+</html>

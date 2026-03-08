@@ -726,13 +726,102 @@
   }
 
   // ═══════════════════════════════════════════════════════════
-  // ADVANCED HUMANIZATION ENGINE (8 PASSES)
-  // Targets: Perplexity, Burstiness, Structure, Predictability
+  // ADVANCED HUMANIZATION ENGINE v3 (12 PASSES)
+  // Targets ALL statistical signatures: perplexity, burstiness, 
+  // information density, sentence structure, token predictability,
+  // passive voice ratio, vocabulary distribution, essay structure
   // ═══════════════════════════════════════════════════════════
 
+  // --- Additional data for new passes ---
+
+  const FIRST_PERSON_INJECTIONS = [
+    'I think ', 'I believe ', 'I\'d say ', 'From what I\'ve seen, ',
+    'In my experience, ', 'The way I see it, ', 'I\'ve noticed that ',
+    'I\'d argue that ', 'If you ask me, ', 'Personally, I think ',
+    'From my perspective, ', 'I\'ve found that ',
+  ];
+
+  const NATURAL_DISFLUENCIES = [
+    'sort of ', 'kind of ', 'pretty much ', 'more or less ',
+    'basically ', 'essentially ', 'you know, ', 'I mean, ',
+    'in a way, ', 'to some extent, ',
+  ];
+
+  const COLLOQUIAL_PHRASES = [
+    { match: /\bis important\b/gi, alts: ['matters', 'counts', 'makes a difference'] },
+    { match: /\bis essential\b/gi, alts: ['is a must', 'you really need', 'can\'t skip'] },
+    { match: /\bit is worth noting\b/gi, alts: ['here\'s the thing', 'keep in mind', 'one thing to know'] },
+    { match: /\bplays a (crucial|vital|key|important|significant|critical) role\b/gi, alts: ['really matters', 'has a big impact', 'makes a real difference'] },
+    { match: /\bin today's (rapidly )?(evolving|changing)\b/gi, alts: ['with how fast things move', 'the way things are going', 'these days with'] },
+    { match: /\bserves as a?\b/gi, alts: ['works as ', 'acts like ', 'is basically '] },
+    { match: /\bat its core\b/gi, alts: ['at the end of the day', 'when you get down to it', 'really'] },
+    { match: /\bin order to\b/gi, alts: ['to', 'so you can', 'if you want to'] },
+    { match: /\bhas the potential to\b/gi, alts: ['could', 'might', 'can'] },
+    { match: /\bit is important to note that\b/gi, alts: ['one thing — ', 'keep in mind, ', 'worth knowing: '] },
+    { match: /\bdue to the fact that\b/gi, alts: ['because', 'since', 'seeing as'] },
+    { match: /\bin the context of\b/gi, alts: ['when it comes to', 'with', 'for'] },
+    { match: /\ba wide range of\b/gi, alts: ['all kinds of', 'lots of', 'a bunch of'] },
+    { match: /\bon the other hand\b/gi, alts: ['then again', 'but', 'flip side though'] },
+    { match: /\bit should be noted\b/gi, alts: ['worth mentioning', 'one thing', 'keep in mind'] },
+    { match: /\bto a great extent\b/gi, alts: ['a lot', 'quite a bit', 'pretty heavily'] },
+    { match: /\bthis is because\b/gi, alts: ['that\'s because', 'the reason is', 'it comes down to'] },
+    { match: /\bas a consequence\b/gi, alts: ['so', 'because of that', 'which means'] },
+    { match: /\bwith respect to\b/gi, alts: ['about', 'when it comes to', 'regarding'] },
+    { match: /\bin light of\b/gi, alts: ['given', 'considering', 'because of'] },
+    { match: /\bfor instance\b/gi, alts: ['like', 'say', 'take'] },
+    { match: /\bfor example\b/gi, alts: ['like', 'say', 'to give you an idea'] },
+    { match: /\bin particular\b/gi, alts: ['especially', 'mainly', 'specifically'] },
+    { match: /\bas well as\b/gi, alts: ['and', 'along with', 'plus'] },
+    { match: /\bin terms of\b/gi, alts: ['when it comes to', 'for', 'with'] },
+    { match: /\bit can be argued\b/gi, alts: ['you could say', 'some would say', 'there\'s a case that'] },
+    { match: /\bhas been shown to\b/gi, alts: ['turns out to', 'seems to', 'tends to'] },
+  ];
+
+  const PASSIVE_TO_ACTIVE = [
+    { match: /\b(\w+) (?:is|are|was|were) being (\w+ed)\b/gi, replace: (m, subj, verb) => `${subj} ${verb}` },
+    { match: /\bit (?:is|was) (\w+ed) that\b/gi, alts: ['turns out', 'we see that', 'you\'ll find'] },
+    { match: /\bcan be (\w+ed)\b/gi, replace: (m, verb) => `you can ${verb}` },
+    { match: /\bshould be (\w+ed)\b/gi, replace: (m, verb) => `you should ${verb}` },
+    { match: /\bmust be (\w+ed)\b/gi, replace: (m, verb) => `you need to ${verb.replace(/ed$/, '')}` },
+    { match: /\bneeds to be (\w+ed)\b/gi, replace: (m, verb) => `needs ${verb.replace(/ed$/, '')}ing` },
+  ];
+
+  const ESSAY_SCAFFOLD_PATTERNS = [
+    /^In conclusion,?\s*/gim,
+    /^To summarize,?\s*/gim,
+    /^To sum up,?\s*/gim,
+    /^In summary,?\s*/gim,
+    /^All in all,?\s*/gim,
+    /^In essence,?\s*/gim,
+    /^As we have seen,?\s*/gim,
+    /^As discussed above,?\s*/gim,
+    /^As mentioned (?:earlier|above|previously),?\s*/gim,
+    /^(?:Overall|Ultimately|Finally|Thus|Hence|Therefore),?\s*/gim,
+  ];
+
+  const HEDGING_REMOVALS = [
+    { match: /\bIt (?:could|might|may) (?:potentially )?be argued that\b/gi, replace: '' },
+    { match: /\bwhile .{5,40}(?:challenges?|limitations?|concerns?).{0,30},\s*/gi, replace: '' },
+    { match: /\bdespite .{5,40}(?:challenges?|limitations?|obstacles?).{0,30},\s*/gi, replace: '' },
+    { match: /\b(?:specific|particular) details (?:are|remain) limited\b/gi, replace: 'the details vary' },
+    { match: /\bbased on (?:the )?available (?:information|data|evidence)\b/gi, replace: 'from what we know' },
+    { match: /\bpotentially\b/g, replace: '' },
+    { match: /\bostensibly\b/g, replace: '' },
+    { match: /\barguably\b/g, replace: '' },
+    { match: /\bindeed\b/gi, replace: '' },
+    { match: /\bcertainly\b/gi, replace: '' },
+  ];
+
+  const EXCITEMENT_REMOVALS = [
+    /(?:^|\. )(?:Exciting|Interesting|Thrilling|Remarkable|Incredible) times (?:lie |are )?ahead[^.]*\.\s*/gi,
+    /(?:^|\. )The future (?:looks|is|remains) (?:bright|promising|exciting|hopeful)[^.]*\.\s*/gi,
+    /(?:^|\. )Let me know if you(?:'d| would) like (?:me to )?(?:expand|elaborate|go deeper|dive deeper)[^.]*[.!]\s*/gi,
+    /(?:^|\. )(?:I hope this (?:helps|was helpful|answers)|Feel free to (?:ask|reach out))[^.]*[.!]\s*/gi,
+  ];
+
   function getStrength() {
-    if (!strengthSlider) return 2;
-    return parseInt(strengthSlider.value) || 2;
+    if (!strengthSlider) return 3;
+    return parseInt(strengthSlider.value) || 3;
   }
 
   function humanizeText(text) {
@@ -748,7 +837,228 @@
       if (before !== result) changeCount++;
     });
 
-    // ─── PASS 1: Sentence surgery (burstiness) ───
+    // ─── PASS 1: Essay scaffolding demolition ───
+    // AI ALWAYS writes intro→body→conclusion. Remove the scaffolding.
+    {
+      // Remove excitement/chatbot closings
+      EXCITEMENT_REMOVALS.forEach(regex => {
+        const before = result;
+        result = result.replace(regex, '. ');
+        if (before !== result) changeCount++;
+      });
+
+      // Remove essay scaffold transitions
+      ESSAY_SCAFFOLD_PATTERNS.forEach(regex => {
+        const before = result;
+        result = result.replace(regex, '');
+        if (before !== result) changeCount++;
+      });
+
+      // Remove hedging patterns
+      HEDGING_REMOVALS.forEach(item => {
+        const before = result;
+        result = result.replace(item.match, item.replace);
+        if (before !== result) changeCount++;
+      });
+    }
+
+    // ─── PASS 2: Colloquial phrase replacements ───
+    // AI uses formal constructions. Humans use casual ones.
+    {
+      COLLOQUIAL_PHRASES.forEach(item => {
+        if (item.match.test(result)) {
+          result = result.replace(item.match, () => {
+            changeCount++;
+            return pickRandom(item.alts, rng);
+          });
+        }
+      });
+    }
+
+    // ─── PASS 3: Word unpredictability boost (moved earlier for better effect) ───
+    {
+      const words = Object.keys(VOCAB_SWAPS);
+      words.forEach(word => {
+        const regex = new RegExp('\\b' + word + '\\b', 'gi');
+        if (regex.test(result)) {
+          const alts = VOCAB_SWAPS[word];
+          result = result.replace(new RegExp('\\b' + word + '\\b', 'gi'), (match) => {
+            const alt = pickRandom(alts, rng);
+            if (match[0] === match[0].toUpperCase() && alt[0] !== alt[0].toUpperCase()) {
+              changeCount++;
+              return alt.charAt(0).toUpperCase() + alt.slice(1);
+            }
+            changeCount++;
+            return alt;
+          });
+        }
+      });
+    }
+
+    // ─── PASS 4: Aggressive contraction forcing ───
+    {
+      CONTRACTIONS.forEach(([regex, contraction]) => {
+        const before = result;
+        result = result.replace(regex, contraction);
+        if (before !== result) changeCount++;
+      });
+
+      // Additional aggressive contractions
+      const extraContractions = [
+        [/\bI have\b/g, "I've"],
+        [/\bI had\b/g, "I'd"],
+        [/\byou have\b/gi, "you've"],
+        [/\byou had\b/gi, "you'd"],
+        [/\byou will\b/gi, "you'll"],
+        [/\bthere has\b/gi, "there's"],
+        [/\bthere had\b/gi, "there'd"],
+        [/\bwhat has\b/gi, "what's"],
+        [/\bwhat had\b/gi, "what'd"],
+        [/\bwhere has\b/gi, "where's"],
+        [/\bwhen has\b/gi, "when's"],
+        [/\bhow has\b/gi, "how's"],
+        [/\bthat has\b/gi, "that's"],
+        [/\bwho has\b/gi, "who's"],
+        [/\bwho had\b/gi, "who'd"],
+        [/\bwho will\b/gi, "who'll"],
+        [/\blet us\b/gi, "let's"],
+        [/\bhe would\b/gi, "he'd"],
+        [/\bshe would\b/gi, "she'd"],
+        [/\bthere would\b/gi, "there'd"],
+        [/\bwe would\b/gi, "we'd"],
+        [/\bthey would\b/gi, "they'd"],
+        [/\bcould have\b/gi, "could've"],
+        [/\bwould have\b/gi, "would've"],
+        [/\bshould have\b/gi, "should've"],
+        [/\bmight have\b/gi, "might've"],
+        [/\bmust have\b/gi, "must've"],
+      ];
+      extraContractions.forEach(([regex, contraction]) => {
+        const before = result;
+        result = result.replace(regex, contraction);
+        if (before !== result) changeCount++;
+      });
+    }
+
+    // ─── PASS 5: Transition annihilation ───
+    {
+      TRANSITION_SWAPS.forEach(swap => {
+        if (swap.match.test(result)) {
+          const alt = pickRandom(swap.alts, rng);
+          result = result.replace(swap.match, alt);
+          changeCount++;
+        }
+      });
+
+      // Kill remaining formal transitions
+      const killTransitions = [
+        [/\bIn this regard,?\s*/gi, ''],
+        [/\bWith that being said,?\s*/gi, ''],
+        [/\bThat being said,?\s*/gi, 'Still, '],
+        [/\bIt is worth mentioning that\s*/gi, ''],
+        [/\bIt bears mentioning that\s*/gi, ''],
+        [/\bNotably,?\s*/gi, ''],
+        [/\bRemarkably,?\s*/gi, ''],
+        [/\bSignificantly,?\s*/gi, ''],
+        [/\bAccordingly,?\s*/gi, 'So '],
+        [/\bConcurrently,?\s*/gi, 'At the same time, '],
+        [/\bConversely,?\s*/gi, 'But '],
+        [/\bHence,?\s*/gi, 'So '],
+        [/\bThus,?\s*/gi, 'So '],
+        [/\bTherefore,?\s*/gi, 'So '],
+        [/\bWhile it is true that\s*/gi, 'Sure, '],
+        [/\bIt is also important to\s*/gi, 'You should also '],
+        [/\bAnother (?:key|important|crucial|vital|notable|significant) (?:aspect|factor|element|consideration|point) is\b/gi, 'Another thing is'],
+        [/\bOne (?:key|important|crucial|vital) (?:aspect|factor|element|consideration|thing) (?:to consider )?is\b/gi, 'One thing is'],
+      ];
+      killTransitions.forEach(([pattern, replacement]) => {
+        const before = result;
+        result = result.replace(pattern, replacement);
+        if (before !== result) changeCount++;
+      });
+    }
+
+    // ─── PASS 6: Passive voice conversion ───
+    {
+      PASSIVE_TO_ACTIVE.forEach(item => {
+        if (item.replace && typeof item.replace === 'function') {
+          const before = result;
+          result = result.replace(item.match, item.replace);
+          if (before !== result) changeCount++;
+        } else if (item.alts) {
+          if (item.match.test(result)) {
+            result = result.replace(item.match, () => {
+              changeCount++;
+              return pickRandom(item.alts, rng);
+            });
+          }
+        }
+      });
+    }
+
+    // ─── PASS 7: First-person voice injection ───
+    // AI NEVER uses first person. This is one of the strongest signals.
+    if (strength >= 2) {
+      const paragraphs = result.split(/\n\s*\n/);
+      let injectCount = 0;
+      const maxInjects = strength >= 3 ? Math.ceil(paragraphs.length * 0.6) : Math.ceil(paragraphs.length * 0.3);
+
+      const newParagraphs = paragraphs.map((para, pIdx) => {
+        if (injectCount >= maxInjects) return para;
+        const sentences = splitSentences(para);
+        if (sentences.length < 2) return para;
+
+        // Pick a sentence to add first-person to (not the very first sentence)
+        const targetIdx = 1 + Math.floor(rng() * Math.min(sentences.length - 1, 3));
+        if (targetIdx < sentences.length && rng() < 0.7) {
+          const s = sentences[targetIdx];
+          const starter = pickRandom(FIRST_PERSON_INJECTIONS, rng);
+          sentences[targetIdx] = starter + s.charAt(0).toLowerCase() + s.slice(1);
+          injectCount++;
+          changeCount++;
+        }
+
+        return sentences.join(' ');
+      });
+      result = newParagraphs.join('\n\n');
+    }
+
+    // ─── PASS 8: Natural disfluency injection ───
+    // Humans say "sort of", "kind of", "basically". AI never does.
+    if (strength >= 2) {
+      const paragraphs = result.split(/\n\s*\n/);
+      let disCount = 0;
+      const maxDis = strength >= 3 ? 6 : 3;
+
+      const newParagraphs = paragraphs.map(para => {
+        if (disCount >= maxDis) return para;
+        const sentences = splitSentences(para);
+
+        const newSentences = sentences.map(s => {
+          if (disCount >= maxDis) return s;
+          const wc = getSentenceWordCount(s);
+          if (wc > 12 && rng() < 0.2) {
+            // Insert before an adjective or after a verb
+            const words = s.split(' ');
+            const insertPos = 3 + Math.floor(rng() * Math.min(words.length - 5, 6));
+            if (insertPos > 2 && insertPos < words.length - 2) {
+              const disfluency = pickRandom(NATURAL_DISFLUENCIES, rng);
+              words.splice(insertPos, 0, disfluency.trim());
+              disCount++;
+              changeCount++;
+              return words.join(' ');
+            }
+          }
+          return s;
+        });
+
+        return newSentences.join(' ');
+      });
+      result = newParagraphs.join('\n\n');
+    }
+
+    // ─── PASS 9: Extreme sentence surgery for burstiness ───
+    // AI has LOW burstiness (uniform sentence length). Humans have HIGH burstiness.
     {
       const paragraphs = result.split(/\n\s*\n/);
       const newParagraphs = paragraphs.map(para => {
@@ -760,48 +1070,41 @@
           const s = sentences[i];
           const wc = getSentenceWordCount(s);
 
-          // Merge very short consecutive sentences (burstiness: create variety)
-          if (strength >= 2 && wc < 8 && i + 1 < sentences.length && getSentenceWordCount(sentences[i + 1]) < 10) {
-            const merged = s.replace(/[.!?]+\s*$/, '') + ', and ' + sentences[i + 1].charAt(0).toLowerCase() + sentences[i + 1].slice(1);
-            newSentences.push(merged);
-            i++; // skip next
-            changeCount++;
-            continue;
-          }
-
-          // Split very long sentences at natural break points
-          if (strength >= 2 && wc > 30) {
-            const splitPoints = [', which ', ', and ', ', but ', '; ', ', where ', ', while '];
-            let didSplit = false;
-            for (const sp of splitPoints) {
-              const idx = s.indexOf(sp);
-              if (idx > 15 && idx < s.length - 15) {
-                const first = s.substring(0, idx) + '.';
-                const second = s.substring(idx + sp.length);
-                const secondCap = second.charAt(0).toUpperCase() + second.slice(1);
-                newSentences.push(first);
-                newSentences.push(secondCap);
-                didSplit = true;
-                changeCount++;
-                break;
-              }
-            }
-            if (!didSplit) newSentences.push(s);
-            continue;
-          }
-
-          // Occasionally create a punchy fragment from a longer sentence
-          if (strength >= 3 && wc > 15 && rng() < 0.15) {
+          // Create very short punchy sentences from long ones
+          if (wc > 20 && rng() < (strength >= 3 ? 0.4 : 0.2)) {
             const commaIdx = s.indexOf(', ');
-            if (commaIdx > 8 && commaIdx < s.length - 10) {
-              const fragment = s.substring(0, commaIdx) + '.';
-              const rest = s.substring(commaIdx + 2);
+            const whichIdx = s.indexOf(' which ');
+            const andIdx = s.indexOf(' and ');
+            const splitPoint = commaIdx > 10 ? commaIdx : (whichIdx > 10 ? whichIdx : (andIdx > 10 ? andIdx : -1));
+
+            if (splitPoint > 5) {
+              const first = s.substring(0, splitPoint).replace(/,\s*$/, '') + '.';
+              const rest = s.substring(splitPoint).replace(/^[,\s]+|^\s*which\s+|^\s*and\s+/i, '');
               const restCap = rest.charAt(0).toUpperCase() + rest.slice(1);
-              newSentences.push(fragment);
+              newSentences.push(first);
               newSentences.push(restCap);
               changeCount++;
               continue;
             }
+          }
+
+          // Merge short consecutive sentences with a dash or semicolon
+          if (wc < 10 && i + 1 < sentences.length && getSentenceWordCount(sentences[i + 1]) < 12 && rng() < 0.4) {
+            const connector = rng() < 0.5 ? ' — ' : '; ';
+            const merged = s.replace(/[.!?]+\s*$/, '') + connector + sentences[i + 1].charAt(0).toLowerCase() + sentences[i + 1].slice(1);
+            newSentences.push(merged);
+            i++;
+            changeCount++;
+            continue;
+          }
+
+          // Very occasionally drop a super short sentence
+          if (strength >= 3 && rng() < 0.08 && i > 0 && i < sentences.length - 1) {
+            const shorts = ['That matters.', 'Big deal.', 'Not always.', 'Fair enough.', 'It depends.', 'Go figure.', 'Makes sense.', 'Worth noting.', 'No question.', 'Think about it.'];
+            newSentences.push(s);
+            newSentences.push(pickRandom(shorts, rng));
+            changeCount++;
+            continue;
           }
 
           newSentences.push(s);
@@ -813,61 +1116,75 @@
       result = newParagraphs.join('\n\n');
     }
 
-    // ─── PASS 2: Contraction forcing ───
+    // ─── PASS 10: Sentence starter diversification (enhanced) ───
     {
-      CONTRACTIONS.forEach(([regex, contraction]) => {
-        const before = result;
-        result = result.replace(regex, contraction);
-        if (before !== result) changeCount++;
-      });
-    }
-
-    // ─── PASS 3: Sentence starter diversification ───
-    if (strength >= 2) {
       const paragraphs = result.split(/\n\s*\n/);
       const newParagraphs = paragraphs.map(para => {
         const sentences = splitSentences(para);
         if (sentences.length < 3) return para;
 
-        // Count how many start with "The" or subject-first patterns
-        let theCount = 0;
-        sentences.forEach(s => {
-          if (/^The\s/i.test(s.trim())) theCount++;
+        // Track starting words to avoid repetition
+        const starts = sentences.map(s => (s.trim().split(/\s+/)[0] || '').toLowerCase());
+        let changed = 0;
+        const maxChanges = strength >= 3 ? 3 : 2;
+
+        const newSentences = sentences.map((s, idx) => {
+          if (changed >= maxChanges || idx === 0) return s;
+
+          // Check if this sentence starts the same way as a nearby sentence
+          const thisStart = starts[idx];
+          const prevStart = idx > 0 ? starts[idx - 1] : '';
+          const prevPrevStart = idx > 1 ? starts[idx - 2] : '';
+
+          const isRepetitive = thisStart === prevStart || thisStart === prevPrevStart ||
+            /^(the|this|these|those|it|they|there|we|one|an?)\s/i.test(s.trim());
+
+          if (isRepetitive && rng() < 0.6) {
+            changed++;
+            changeCount++;
+            const starter = pickRandom(HUMAN_STARTERS, rng);
+            return starter + s.charAt(0).toLowerCase() + s.slice(1);
+          }
+          return s;
         });
 
-        // If too many start with "The", diversify some
-        if (theCount >= 2) {
-          let changed = 0;
-          const newSentences = sentences.map((s, idx) => {
-            if (changed >= 2) return s;
-            if (idx === 0) return s; // leave first sentence alone
-            if (/^The\s/i.test(s.trim()) && rng() < 0.5) {
-              changed++;
-              changeCount++;
-              return pickRandom(HUMAN_STARTERS, rng) + s.charAt(0).toLowerCase() + s.slice(1);
-            }
-            return s;
-          });
-          return newSentences.join(' ');
-        }
-
-        return para;
+        return newSentences.join(' ');
       });
       result = newParagraphs.join('\n\n');
     }
 
-    // ─── PASS 4: Transitional chaos ───
-    {
-      TRANSITION_SWAPS.forEach(swap => {
-        if (swap.match.test(result)) {
-          const alt = pickRandom(swap.alts, rng);
-          result = result.replace(swap.match, alt);
-          changeCount++;
+    // ─── PASS 11: Paragraph restructuring + atomization ───
+    if (strength >= 2) {
+      const paragraphs = result.split(/\n\s*\n/);
+      if (paragraphs.length >= 2) {
+        const newParagraphs = [];
+        for (let i = 0; i < paragraphs.length; i++) {
+          const para = paragraphs[i];
+          const sentences = splitSentences(para);
+
+          // Aggressively split oversized paragraphs
+          if (sentences.length >= 4 && rng() < 0.7) {
+            const splitAt = 2 + Math.floor(rng() * Math.max(1, sentences.length - 3));
+            newParagraphs.push(sentences.slice(0, splitAt).join(' '));
+            newParagraphs.push(sentences.slice(splitAt).join(' '));
+            changeCount++;
+          }
+          // Create 1-sentence paragraphs (humans do this for emphasis)
+          else if (sentences.length >= 3 && rng() < 0.3) {
+            const pullIdx = 1 + Math.floor(rng() * (sentences.length - 1));
+            const pulled = sentences.splice(pullIdx, 1)[0];
+            newParagraphs.push(sentences.join(' '));
+            newParagraphs.push(pulled);
+            changeCount++;
+          } else {
+            newParagraphs.push(para);
+          }
         }
-      });
+        result = newParagraphs.join('\n\n');
+      }
     }
 
-    // ─── PASS 5: Rhythm breakers ───
+    // ─── PASS 12: Rhythm breakers + parenthetical asides ───
     if (strength >= 2) {
       const paragraphs = result.split(/\n\s*\n/);
       const newParagraphs = paragraphs.map((para, paraIdx) => {
@@ -875,10 +1192,8 @@
         if (sentences.length < 2) return para;
 
         const newSentences = sentences.map((s, sIdx) => {
-          // Add parenthetical asides to ~15% of sentences (medium) or ~25% (aggressive)
-          const asideChance = strength >= 3 ? 0.25 : 0.15;
+          const asideChance = strength >= 3 ? 0.3 : 0.15;
           if (sIdx > 0 && getSentenceWordCount(s) > 10 && rng() < asideChance) {
-            // Insert before the period
             const aside = pickRandom(PARENTHETICAL_ASIDES, rng);
             const stripped = s.replace(/([.!?]+)\s*$/, '');
             const punct = s.match(/[.!?]+\s*$/)?.[0] || '.';
@@ -888,8 +1203,8 @@
           return s;
         });
 
-        // In aggressive mode, add a mid-sentence break to one sentence per paragraph
-        if (strength >= 3 && sentences.length >= 3 && rng() < 0.3) {
+        // Add mid-sentence breaks
+        if (strength >= 3 && sentences.length >= 3 && rng() < 0.35) {
           const targetIdx = 1 + Math.floor(rng() * (newSentences.length - 1));
           const target = newSentences[targetIdx];
           if (target && getSentenceWordCount(target) > 12) {
@@ -907,12 +1222,12 @@
         return newSentences.join(' ');
       });
 
-      // In aggressive mode, insert rhetorical questions between some paragraphs
+      // Insert rhetorical questions between paragraphs
       if (strength >= 3) {
         const finalParagraphs = [];
         newParagraphs.forEach((para, idx) => {
           finalParagraphs.push(para);
-          if (idx > 0 && idx < newParagraphs.length - 1 && rng() < 0.2) {
+          if (idx > 0 && idx < newParagraphs.length - 1 && rng() < 0.25) {
             finalParagraphs.push(pickRandom(RHETORICAL_QUESTIONS, rng));
             changeCount++;
           }
@@ -923,62 +1238,7 @@
       }
     }
 
-    // ─── PASS 6: Paragraph restructuring ───
-    if (strength >= 2) {
-      const paragraphs = result.split(/\n\s*\n/);
-      if (paragraphs.length >= 3) {
-        const newParagraphs = [];
-        for (let i = 0; i < paragraphs.length; i++) {
-          const para = paragraphs[i];
-          const sentences = splitSentences(para);
-
-          // Split oversized paragraphs (5+ sentences) at a natural point
-          if (sentences.length >= 5 && rng() < 0.6) {
-            const splitAt = 2 + Math.floor(rng() * (sentences.length - 3));
-            const firstHalf = sentences.slice(0, splitAt).join(' ');
-            const secondHalf = sentences.slice(splitAt).join(' ');
-            newParagraphs.push(firstHalf);
-            newParagraphs.push(secondHalf);
-            changeCount++;
-          }
-          // Create a 1-sentence paragraph occasionally
-          else if (sentences.length >= 4 && rng() < 0.25) {
-            const pullIdx = Math.floor(rng() * sentences.length);
-            const pulled = sentences.splice(pullIdx, 1)[0];
-            newParagraphs.push(sentences.join(' '));
-            newParagraphs.push(pulled);
-            changeCount++;
-          } else {
-            newParagraphs.push(para);
-          }
-        }
-        result = newParagraphs.join('\n\n');
-      }
-    }
-
-    // ─── PASS 7: Word unpredictability boost ───
-    {
-      const words = Object.keys(VOCAB_SWAPS);
-      words.forEach(word => {
-        const regex = new RegExp('\\b' + word + '\\b', 'gi');
-        if (regex.test(result)) {
-          const alts = VOCAB_SWAPS[word];
-          // Use different alternatives for each occurrence
-          result = result.replace(new RegExp('\\b' + word + '\\b', 'gi'), (match) => {
-            const alt = pickRandom(alts, rng);
-            // Preserve capitalization
-            if (match[0] === match[0].toUpperCase() && alt[0] !== alt[0].toUpperCase()) {
-              changeCount++;
-              return alt.charAt(0).toUpperCase() + alt.slice(1);
-            }
-            changeCount++;
-            return alt;
-          });
-        }
-      });
-    }
-
-    // ─── PASS 8: Final cleanup ───
+    // ─── PASS 13: Final cleanup ───
     {
       // Fix sentence capitalization after removals
       result = result.replace(/\.\s+([a-z])/g, (m, c) => '. ' + c.toUpperCase());
@@ -989,10 +1249,18 @@
       result = result.replace(/\s*,\s*\./g, '.');
       result = result.replace(/,\s*,/g, ',');
 
+      // Fix double periods, empty sentences
+      result = result.replace(/\.{2,}/g, '.');
+      result = result.replace(/\.\s*\./g, '.');
+
       // Clean up double spaces and excessive newlines
       result = result.replace(/  +/g, ' ');
       result = result.replace(/\n{3,}/g, '\n\n');
       result = result.replace(/ ([.,!?;:])/g, '$1');
+
+      // Remove empty paragraphs
+      result = result.split('\n\n').filter(p => p.trim().length > 0).join('\n\n');
+
       result = result.trim();
     }
 

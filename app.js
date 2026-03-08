@@ -1106,20 +1106,24 @@
           const wc = getSentenceWordCount(s);
 
           // Create very short punchy sentences from long ones
-          if (wc > 20 && rng() < (strength >= 3 ? 0.4 : 0.2)) {
+          if (wc > 25 && rng() < (strength >= 3 ? 0.3 : 0.15)) {
             const commaIdx = s.indexOf(', ');
             const whichIdx = s.indexOf(' which ');
             const andIdx = s.indexOf(' and ');
-            const splitPoint = commaIdx > 10 ? commaIdx : (whichIdx > 10 ? whichIdx : (andIdx > 10 ? andIdx : -1));
+            const splitPoint = commaIdx > 15 ? commaIdx : (whichIdx > 15 ? whichIdx : (andIdx > 15 ? andIdx : -1));
 
             if (splitPoint > 5) {
-              const first = s.substring(0, splitPoint).replace(/,\s*$/, '') + '.';
-              const rest = s.substring(splitPoint).replace(/^[,\s]+|^\s*which\s+|^\s*and\s+/i, '');
-              const restCap = rest.charAt(0).toUpperCase() + rest.slice(1);
-              newSentences.push(first);
-              newSentences.push(restCap);
-              changeCount++;
-              continue;
+              const firstPart = s.substring(0, splitPoint).replace(/,\s*$/, '');
+              const secondPart = s.substring(splitPoint).replace(/^[,\s]+|^\s*which\s+|^\s*and\s+/i, '');
+              // Only split if BOTH halves have enough words to be valid sentences
+              if (getSentenceWordCount(firstPart) >= 6 && getSentenceWordCount(secondPart) >= 6) {
+                const first = firstPart + '.';
+                const restCap = secondPart.charAt(0).toUpperCase() + secondPart.slice(1);
+                newSentences.push(first);
+                newSentences.push(restCap);
+                changeCount++;
+                continue;
+              }
             }
           }
 
@@ -1151,10 +1155,11 @@
         const sentences = splitSentences(para);
         if (sentences.length < 3) return para;
 
-        // Track starting words to avoid repetition
+        // Track starting words to avoid repetition AND avoid using same starter twice
         const starts = sentences.map(s => (s.trim().split(/\s+/)[0] || '').toLowerCase());
         let changed = 0;
-        const maxChanges = strength >= 3 ? 3 : 2;
+        const maxChanges = strength >= 3 ? 2 : 1;
+        const usedStarters = new Set();
 
         const newSentences = sentences.map((s, idx) => {
           if (changed >= maxChanges || idx === 0) return s;
@@ -1162,16 +1167,25 @@
           // Check if this sentence starts the same way as a nearby sentence
           const thisStart = starts[idx];
           const prevStart = idx > 0 ? starts[idx - 1] : '';
-          const prevPrevStart = idx > 1 ? starts[idx - 2] : '';
 
-          const isRepetitive = thisStart === prevStart || thisStart === prevPrevStart ||
-            /^(the|this|these|those|it|they|there|we|one|an?)\s/i.test(s.trim());
+          const isRepetitive = thisStart === prevStart ||
+            /^(the|this|these|those|it|they|there|we|one)\s/i.test(s.trim());
 
-          if (isRepetitive && rng() < 0.6) {
-            changed++;
-            changeCount++;
-            const starter = pickRandom(HUMAN_STARTERS, rng);
-            return starter + s.charAt(0).toLowerCase() + s.slice(1);
+          if (isRepetitive && rng() < 0.4) {
+            // Pick a starter we haven't used yet
+            let starter;
+            let attempts = 0;
+            do {
+              starter = pickRandom(HUMAN_STARTERS, rng);
+              attempts++;
+            } while (usedStarters.has(starter) && attempts < 5);
+
+            if (!usedStarters.has(starter)) {
+              usedStarters.add(starter);
+              changed++;
+              changeCount++;
+              return starter + s.charAt(0).toLowerCase() + s.slice(1);
+            }
           }
           return s;
         });
@@ -1236,8 +1250,8 @@
           return s;
         });
 
-        // Add mid-sentence breaks
-        if (strength >= 3 && sentences.length >= 3 && rng() < 0.35) {
+        // Add mid-sentence breaks (max 1 per text)
+        if (strength >= 3 && sentences.length >= 4 && rng() < 0.15 && paraIdx === 1) {
           const targetIdx = 1 + Math.floor(rng() * (newSentences.length - 1));
           const target = newSentences[targetIdx];
           if (target && getSentenceWordCount(target) > 12) {
@@ -1260,7 +1274,7 @@
         const finalParagraphs = [];
         newParagraphs.forEach((para, idx) => {
           finalParagraphs.push(para);
-          if (idx > 0 && idx < newParagraphs.length - 1 && rng() < 0.25) {
+          if (idx > 0 && idx < newParagraphs.length - 1 && rng() < 0.1) {
             finalParagraphs.push(pickRandom(RHETORICAL_QUESTIONS, rng));
             changeCount++;
           }

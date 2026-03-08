@@ -22,13 +22,19 @@
         window.location.reload();
     }
 
-    // ─── Seed built-in Pro account ───
-    (function seedProAccount() {
+    // ─── Seed built-in accounts ───
+    (function seedAccounts() {
         const users = JSON.parse(localStorage.getItem('humainize_users') || '{}');
+        let changed = false;
         if (!users['pro@humainize.com']) {
             users['pro@humainize.com'] = { password: btoa('pro12345'), plan: 'pro', createdAt: Date.now() };
-            localStorage.setItem('humainize_users', JSON.stringify(users));
+            changed = true;
         }
+        if (!users['free@humainize.com']) {
+            users['free@humainize.com'] = { password: btoa('free12345'), plan: 'free', createdAt: Date.now() };
+            changed = true;
+        }
+        if (changed) localStorage.setItem('humainize_users', JSON.stringify(users));
     })();
 
     // ─── If user is already logged in, redirect to app ───

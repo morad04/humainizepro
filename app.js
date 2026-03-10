@@ -813,6 +813,32 @@
     { match: /\blanguage-related anxiety\b/gi, alts: ['stress about their English', 'nerves around language', 'worry about speaking'] },
     { match: /\bremains necessary\b/gi, alts: ['is still needed', 'hasn\'t been done yet', 'matters a lot'] },
     { match: /\bexisting literature\b/gi, alts: ['past research', 'what\'s already been written', 'previous studies'] },
+    // --- Additional formality breakers ---
+    { match: /\bfurther restricts\b/gi, alts: ['makes it harder to', 'cuts down on', 'gets in the way of'] },
+    { match: /\bincreases academic stress\b/gi, alts: ['piles on more stress', 'adds to the pressure', 'makes school harder'] },
+    { match: /\bcreating a cycle\b/gi, alts: ['and it turns into a cycle', 'which feeds back into itself', 'and this keeps going'] },
+    { match: /\bimpacts both\b/gi, alts: ['hits both', 'touches both', 'affects both'] },
+    { match: /\bfewer studies examining\b/gi, alts: ['not as many studies looking at', 'less research that digs into', 'few papers that actually explore'] },
+    { match: /\bremains essential\b/gi, alts: ['is still really important', 'still matters a lot', 'is key'] },
+    { match: /\bdesigning effective\b/gi, alts: ['coming up with good', 'building helpful', 'creating solid'] },
+    { match: /\binstitutional support\b/gi, alts: ['university support', 'school-level help', 'support from the university'] },
+    { match: /\btherefore examines\b/gi, alts: ['so looks at', 'so examines', 'takes a closer look at'] },
+    { match: /\baffect the academic performance\b/gi, alts: ['affect grades', 'shape how students do', 'influence academic results'] },
+    { match: /\bclassroom participation\b/gi, alts: ['how much students participate', 'involvement in class', 'classroom involvement'] },
+    { match: /\bidentify common linguistic challenges\b/gi, alts: ['find the main language struggles', 'spot the common language problems', 'figure out what language issues come up'] },
+    { match: /\banalyze how these challenges\b/gi, alts: ['look at how these problems', 'see how these issues', 'understand how these struggles'] },
+    { match: /\bexplore strategies\b/gi, alts: ['find ways', 'look at what helps', 'see what works'] },
+    { match: /\bfacilitate adaptation\b/gi, alts: ['help with adjusting', 'make it easier to adjust', 'support settling in'] },
+    { match: /\binform university policies\b/gi, alts: ['help shape university policies', 'feed into how universities handle things', 'give universities ideas'] },
+    { match: /\bcontribute to the development\b/gi, alts: ['help build', 'feed into creating', 'play into developing'] },
+    { match: /\btargeted language\b/gi, alts: ['focused language', 'specific language', 'tailored language'] },
+    { match: /\bacademic support initiatives\b/gi, alts: ['academic support programs', 'help programs', 'support efforts'] },
+    { match: /\bclassroom engagement\b/gi, alts: ['involvement in class', 'class participation', 'how engaged students are'] },
+    { match: /\blimit opportunities\b/gi, alts: ['cut down on chances', 'reduce the chances', 'make it harder to find openings'] },
+    { match: /\bdeeper engagement with\b/gi, alts: ['really getting into', 'deeper exchange with', 'more interaction with'] },
+    { match: /\baffect academic performance\b/gi, alts: ['affect grades', 'hurt how well they do', 'shape their results'] },
+    { match: /\binteractive forms of learning\b/gi, alts: ['hands-on learning', 'more interactive ways of learning', 'learning that involves participation'] },
+    { match: /\bactive verbal input\b/gi, alts: ['actually speaking up', 'real verbal contribution', 'talking and sharing ideas'] },
   ];
 
   const PASSIVE_TO_ACTIVE = [
@@ -1358,86 +1384,124 @@
     }
 
     // ═══════════════════════════════════════════════════════════
-    // PASS 13: TRIPLE-LAYER TOKENIZATION ATTACK
-    // Attacks AI detector tokenization at 3 levels:
-    // 1. Homoglyph replacement (SilverSpeak paper, ACL 2025)
-    // 2. Zero-width character injection
-    // 3. Unicode space mixing
+    // PASS 13: ADDITIONAL LINGUISTIC HUMANIZATION
+    // (Replaced Unicode tricks with clean text transformations)
     // ═══════════════════════════════════════════════════════════
+
+    // --- 13a: Sentence structure inversion ---
+    // Randomly flip "X, so Y" → "Y, since X" etc. for unpredictability
     if (strength >= 2) {
-      // --- Layer 1: Homoglyph Replacement ---
-      // Replace Latin characters with visually identical Cyrillic/Greek chars
-      // This completely breaks tokenizer vocabulary lookups
-      const homoglyphs = {
-        'a': '\u0430', // Cyrillic а
-        'e': '\u0435', // Cyrillic е
-        'o': '\u043E', // Cyrillic о
-        'c': '\u0441', // Cyrillic с
-        'p': '\u0440', // Cyrillic р
-        's': '\u0455', // Cyrillic ѕ
-        'i': '\u0456', // Cyrillic і
-        'x': '\u0445', // Cyrillic х
-        'y': '\u0443', // Cyrillic у (looks like y in some fonts)
+      const paragraphs = result.split(/\n\s*\n/);
+      let invCount = 0;
+      const maxInv = strength >= 3 ? 4 : 2;
+
+      const newParagraphs = paragraphs.map(para => {
+        const sentences = splitSentences(para);
+        const newSentences = sentences.map(s => {
+          if (invCount >= maxInv) return s;
+          const wc = getSentenceWordCount(s);
+          if (wc < 10 || wc > 30) return s;
+
+          // "While X, Y" → "Y. X, though."
+          const whileMatch = s.match(/^While\s+(.{10,}?),\s+(.{10,}?)([.!?])\s*$/);
+          if (whileMatch && rng() < 0.4) {
+            const [, condition, main, punct] = whileMatch;
+            invCount++; changeCount++;
+            return main.charAt(0).toUpperCase() + main.slice(1) + '. ' +
+              condition.charAt(0).toUpperCase() + condition.slice(1) + ', though' + punct;
+          }
+
+          // "Since X, Y" → "Y — X."
+          const sinceMatch = s.match(/^Since\s+(.{8,}?),\s+(.{8,}?)([.!?])\s*$/);
+          if (sinceMatch && rng() < 0.35) {
+            const [, reason, main, punct] = sinceMatch;
+            invCount++; changeCount++;
+            return main.charAt(0).toUpperCase() + main.slice(1).replace(/[.!?]\s*$/, '') +
+              ' — ' + reason.charAt(0).toLowerCase() + reason.slice(1) + punct;
+          }
+
+          return s;
+        });
+        return newSentences.join(' ');
+      });
+      result = newParagraphs.join('\n\n');
+    }
+
+    // --- 13b: Natural imperfections ---
+    // Humans make minor grammatical "imperfections" that AI avoids
+    if (strength >= 2) {
+      const imperfections = [
+        // End sentences with prepositions (natural for humans)
+        { match: /\bfor which\b/gi, alts: ['that', 'which'] },
+        { match: /\bthrough which\b/gi, alts: ['that', 'where'] },
+        { match: /\bto whom\b/gi, alts: ['who', 'that'] },
+        // Split infinitives (humans do this naturally)
+        { match: /\bto quickly (\w+)\b/gi, replace: 'to $1 quickly' },
+        // Starting with conjunctions (very human)
+        // Already handled by other passes
+      ];
+
+      imperfections.forEach(item => {
+        if (item.alts && item.match.test(result)) {
+          result = result.replace(item.match, () => {
+            changeCount++;
+            return pickRandom(item.alts, rng);
+          });
+        } else if (item.replace) {
+          const before = result;
+          result = result.replace(item.match, item.replace);
+          if (before !== result) changeCount++;
+        }
+      });
+    }
+
+    // --- 13c: Extra word-level diversity ---
+    // Replace remaining AI-typical single words that detectors flag
+    if (strength >= 2) {
+      const extraSwaps = {
+        'encompasses': ['covers', 'includes', 'takes in'],
+        'encompasses a': ['covers a', 'includes a', 'takes in a'],
+        'necessitates': ['needs', 'calls for', 'requires'],
+        'articulate': ['express', 'put into words', 'talk about'],
+        'manifests': ['shows up', 'appears', 'comes out'],
+        'constitutes': ['makes up', 'is', 'forms'],
+        'elucidates': ['explains', 'clears up', 'sheds light on'],
+        'delineate': ['outline', 'spell out', 'map out'],
+        'delineated': ['outlined', 'spelled out', 'mapped out'],
+        'corroborates': ['backs up', 'supports', 'confirms'],
+        'exacerbates': ['makes worse', 'worsens', 'adds to'],
+        'exacerbate': ['make worse', 'worsen', 'add to'],
+        'predominant': ['main', 'biggest', 'most common'],
+        'predominantly': ['mostly', 'mainly', 'for the most part'],
+        'notwithstanding': ['despite', 'even with', 'regardless of'],
+        'whereby': ['where', 'in which', 'so that'],
+        'aforementioned': ['mentioned', 'already discussed', 'noted'],
+        'pertaining': ['related', 'about', 'to do with'],
+        'hinder': ['block', 'get in the way of', 'hold back'],
+        'hindered': ['blocked', 'held back', 'slowed down'],
+        'hindering': ['blocking', 'holding back', 'slowing down'],
+        'mitigate': ['reduce', 'ease', 'lessen'],
+        'mitigated': ['reduced', 'eased', 'lessened'],
+        'intrinsic': ['built-in', 'natural', 'core'],
+        'supplementary': ['extra', 'additional', 'added'],
+        'disparities': ['gaps', 'differences', 'imbalances'],
       };
 
-      // On Aggressive, replace more characters
-      const homoglyphChance = strength >= 3 ? 0.35 : 0.2;
-      const homoglyphKeys = Object.keys(homoglyphs);
-
-      let homoglyphResult = '';
-      for (let ci = 0; ci < result.length; ci++) {
-        const ch = result[ci];
-        const lower = ch.toLowerCase();
-        if (homoglyphKeys.includes(lower) && rng() < homoglyphChance) {
-          // Preserve original case
-          if (ch === ch.toUpperCase() && ch !== ch.toLowerCase()) {
-            homoglyphResult += homoglyphs[lower].toUpperCase();
-          } else {
-            homoglyphResult += homoglyphs[lower];
-          }
-          changeCount++;
-        } else {
-          homoglyphResult += ch;
+      const extraWords = Object.keys(extraSwaps);
+      extraWords.forEach(word => {
+        const regex = new RegExp('\\b' + word + '\\b', 'gi');
+        if (regex.test(result)) {
+          const alts = extraSwaps[word];
+          result = result.replace(new RegExp('\\b' + word + '\\b', 'gi'), (match) => {
+            const alt = pickRandom(alts, rng);
+            if (match[0] === match[0].toUpperCase() && alt[0] !== alt[0].toUpperCase()) {
+              changeCount++;
+              return alt.charAt(0).toUpperCase() + alt.slice(1);
+            }
+            changeCount++;
+            return alt;
+          });
         }
-      }
-      result = homoglyphResult;
-
-      // --- Layer 2: Zero-Width Character Injection ---
-      // Insert invisible characters between some words to break token boundaries
-      const zeroWidthChars = [
-        '\u200B', // Zero Width Space
-        '\u200C', // Zero Width Non-Joiner
-        '\u200D', // Zero Width Joiner
-        '\uFEFF', // Zero Width No-Break Space
-      ];
-
-      const zwcChance = strength >= 3 ? 0.3 : 0.15;
-
-      // Insert between words (after spaces)
-      result = result.replace(/(\S)( )(\S)/g, (match, before, space, after) => {
-        if (rng() < zwcChance) {
-          const zwc = pickRandom(zeroWidthChars, rng);
-          changeCount++;
-          return before + space + zwc + after;
-        }
-        return match;
-      });
-
-      // --- Layer 3: Unicode Space Mixing ---
-      const unicodeSpaces = [
-        '\u2000', '\u2001', '\u2002', '\u2003', '\u2004',
-        '\u2005', '\u2006', '\u2007', '\u2008', '\u2009',
-        '\u200A', '\u205F',
-      ];
-
-      const spaceChance = strength >= 3 ? 0.5 : 0.3;
-
-      result = result.replace(/ /g, (match) => {
-        if (rng() < spaceChance) {
-          changeCount++;
-          return pickRandom(unicodeSpaces, rng);
-        }
-        return match;
       });
     }
 

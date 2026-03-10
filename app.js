@@ -1244,7 +1244,7 @@
     // AI has LOW burstiness (uniform sentence length). Humans have HIGH burstiness.
     {
       const paragraphs = result.split(/\n\s*\n/);
-      const newParagraphs = paragraphs.map(para => {
+      const newParagraphs = paragraphs.map((para, paraIdx) => {
         const sentences = splitSentences(para);
         if (sentences.length < 2) return para;
         const newSentences = [];
@@ -1253,20 +1253,28 @@
           const s = sentences[i];
           const wc = getSentenceWordCount(s);
 
-          // Create very short punchy sentences from long ones
-          if (wc > 25 && rng() < (strength >= 3 ? 0.3 : 0.15)) {
+          // MORE aggressive splitting — lower threshold (20 words vs 25)
+          // and higher chance especially in the first paragraph
+          const splitChance = paraIdx === 0 ? (strength >= 3 ? 0.5 : 0.3) : (strength >= 3 ? 0.35 : 0.2);
+          if (wc > 20 && rng() < splitChance) {
             const commaIdx = s.indexOf(', ');
             const whichIdx = s.indexOf(' which ');
             const andIdx = s.indexOf(' and ');
-            const splitPoint = commaIdx > 15 ? commaIdx : (whichIdx > 15 ? whichIdx : (andIdx > 15 ? andIdx : -1));
+            const butIdx = s.indexOf(' but ');
+            const splitPoint = commaIdx > 12 ? commaIdx : (butIdx > 12 ? butIdx : (whichIdx > 12 ? whichIdx : (andIdx > 12 ? andIdx : -1)));
 
             if (splitPoint > 5) {
               const firstPart = s.substring(0, splitPoint).replace(/,\s*$/, '');
-              const secondPart = s.substring(splitPoint).replace(/^[,\s]+|^\s*which\s+|^\s*and\s+/i, '');
-              // Only split if BOTH halves have enough words to be valid sentences
-              if (getSentenceWordCount(firstPart) >= 6 && getSentenceWordCount(secondPart) >= 6) {
+              const secondPart = s.substring(splitPoint).replace(/^[,\s]+|^\s*which\s+|^\s*and\s+|^\s*but\s+/i, '');
+              if (getSentenceWordCount(firstPart) >= 5 && getSentenceWordCount(secondPart) >= 5) {
                 const first = firstPart + '.';
-                const restCap = secondPart.charAt(0).toUpperCase() + secondPart.slice(1);
+                // Occasionally start second part with 'And', 'But' for natural feel
+                let restCap = secondPart.charAt(0).toUpperCase() + secondPart.slice(1);
+                if (rng() < 0.3 && butIdx === splitPoint) {
+                  restCap = 'But ' + secondPart.charAt(0).toLowerCase() + secondPart.slice(1);
+                } else if (rng() < 0.2 && andIdx === splitPoint) {
+                  restCap = 'And ' + secondPart.charAt(0).toLowerCase() + secondPart.slice(1);
+                }
                 newSentences.push(first);
                 newSentences.push(restCap);
                 changeCount++;
@@ -1276,16 +1284,15 @@
           }
 
           // Merge short consecutive sentences with a dash or semicolon
-          if (wc < 10 && i + 1 < sentences.length && getSentenceWordCount(sentences[i + 1]) < 12 && rng() < 0.4) {
-            const connector = rng() < 0.5 ? ' — ' : '; ';
+          if (wc < 10 && i + 1 < sentences.length && getSentenceWordCount(sentences[i + 1]) < 12 && rng() < 0.5) {
+            const connectors = [' — ', '; ', ' and ', ', plus '];
+            const connector = pickRandom(connectors, rng);
             const merged = s.replace(/[.!?]+\s*$/, '') + connector + sentences[i + 1].charAt(0).toLowerCase() + sentences[i + 1].slice(1);
             newSentences.push(merged);
             i++;
             changeCount++;
             continue;
           }
-
-          // (removed: forced short sentences like 'Worth noting.' created detectable patterns)
 
           newSentences.push(s);
         }
@@ -1294,6 +1301,35 @@
       });
 
       result = newParagraphs.join('\n\n');
+    }
+
+    // ─── PASS 9b: Opening paragraph sentence reordering ───
+    // AI detectors strongly flag uniform sentence ordering at the start.
+    // Swap 2-3 sentences in the opening paragraph for unpredictability.
+    if (strength >= 2) {
+      const paragraphs = result.split(/\n\s*\n/);
+      if (paragraphs.length > 0) {
+        const sentences = splitSentences(paragraphs[0]);
+        if (sentences.length >= 4) {
+          // Swap positions of sentences 1 and 2 (0-indexed)
+          // This breaks the AI's typical intro pattern
+          if (rng() < 0.6) {
+            const temp = sentences[0];
+            sentences[0] = sentences[1];
+            sentences[1] = temp;
+            changeCount++;
+          }
+          // Occasionally also swap positions 3 and 4
+          if (sentences.length >= 5 && rng() < 0.4) {
+            const temp = sentences[3];
+            sentences[3] = sentences[4];
+            sentences[4] = temp;
+            changeCount++;
+          }
+          paragraphs[0] = sentences.join(' ');
+          result = paragraphs.join('\n\n');
+        }
+      }
     }
 
     // ─── PASS 10: Sentence starter diversification (minimal) ───

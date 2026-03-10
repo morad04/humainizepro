@@ -939,6 +939,155 @@
       });
     }
 
+    // ─── PASS 2b: Copula avoidance fix (Skill Pattern #8) ───
+    // AI avoids "is/are" in favor of wordy alternatives
+    {
+      const copulaFixes = [
+        { match: /\bserves as a?\b/gi, alts: ['is ', 'is basically ', 'works as '] },
+        { match: /\bstands as a?\b/gi, alts: ['is ', 'is basically '] },
+        { match: /\brepresents a?\b/gi, alts: ['is '] },
+        { match: /\bconstitutes a?\b/gi, alts: ['is ', 'makes up '] },
+        { match: /\bboasts\b/gi, alts: ['has', 'offers', 'comes with'] },
+        { match: /\bfeatures\b/gi, alts: ['has', 'includes', 'offers'] },
+        { match: /\bencompasses\b/gi, alts: ['covers', 'includes'] },
+        { match: /\bcomprises\b/gi, alts: ['includes', 'is made up of', 'has'] },
+      ];
+      copulaFixes.forEach(item => {
+        if (item.match.test(result)) {
+          result = result.replace(item.match, () => {
+            changeCount++;
+            return pickRandom(item.alts, rng);
+          });
+        }
+      });
+    }
+
+    // ─── PASS 2c: Significance inflation removal (Skill Pattern #1) ───
+    // AI inflates importance with empty symbolism
+    {
+      const inflationFixes = [
+        { match: /\bmarks? a pivotal (?:moment|shift|turning point) in\b/gi, alts: ['changed', 'shifted', 'impacted'] },
+        { match: /\bserves? as a? testament to\b/gi, alts: ['shows', 'proves', 'is proof of'] },
+        { match: /\bunderscore(?:s)? the broader trend(?:s)? of\b/gi, alts: ['fits with', 'ties into', 'shows'] },
+        { match: /\bplays? an? (?:crucial|vital|key|important|pivotal|significant|critical|instrumental) role in\b/gi, alts: ['really matters for', 'helps with', 'is big for'] },
+        { match: /\bnot(?:ing|e) that this is (?:particularly )?(?:crucial|vital|important|significant)\b/gi, alts: ['keep in mind', 'worth pointing out'] },
+        { match: /\bit (?:is|remains) (?:crucial|vital|important|imperative) (?:to|that)\b/gi, alts: ['you need to', 'it matters that', "it's key to"] },
+        { match: /\b(?:has|have) far-reaching (?:implications|consequences|effects)\b/gi, alts: ['matters a lot', 'has real effects', 'changes things'] },
+        { match: /\bof paramount importance\b/gi, alts: ['really important', 'critical', 'what matters most'] },
+      ];
+      inflationFixes.forEach(item => {
+        if (item.match.test(result)) {
+          result = result.replace(item.match, () => {
+            changeCount++;
+            return pickRandom(item.alts, rng);
+          });
+        }
+      });
+    }
+
+    // ─── PASS 2d: Negative parallelism rewrite (Skill Pattern #9) ───
+    // AI loves "Not only X but also Y" constructions
+    {
+      const parallelismFixes = [
+        { match: /\bnot only\s+(.{5,40}?)\s*,?\s*but\s+(?:also\s+)?/gi, replace: (m, x) => x + '. And also ' },
+        { match: /\bit'?s not (?:just|merely) (?:about )?(.{5,40}?)[,;]\s*(?:it'?s|but)\s+/gi, replace: (m, x) => "It's " },
+        { match: /\bwhile\s+(.{5,20}?)\s+(?:remains?|is)\s+(?:important|crucial|vital),?\s*/gi, alts: ['Sure, ', 'Yes, ', ''] },
+      ];
+      parallelismFixes.forEach(item => {
+        if (item.replace && typeof item.replace === 'function') {
+          const before = result;
+          result = result.replace(item.match, item.replace);
+          if (before !== result) changeCount++;
+        } else if (item.alts && item.match.test(result)) {
+          result = result.replace(item.match, () => {
+            changeCount++;
+            return pickRandom(item.alts, rng);
+          });
+        }
+      });
+    }
+
+    // ─── PASS 2e: Rule of three breaker (Skill Pattern #10) ───
+    // AI loves listing exactly 3 comma-separated items
+    if (strength >= 2) {
+      // Find "X, Y, and Z" patterns and occasionally drop one or rewrite
+      result = result.replace(/\b(\w[\w\s]{2,20}),\s+([\w\s]{2,20}),\s+and\s+([\w\s]{2,20})\b/g, (match, a, b, c) => {
+        if (rng() < 0.25) {
+          changeCount++;
+          // Drop the middle item
+          return a + ' and ' + c;
+        }
+        if (rng() < 0.3) {
+          changeCount++;
+          // Use "along with" instead of triple list
+          return a + ' along with ' + c;
+        }
+        return match; // keep most lists intact
+      });
+    }
+
+    // ─── PASS 2f: Em dash reduction (Skill Pattern #13) ───
+    // AI overuses em dashes. Replace ~40% with commas or periods
+    {
+      let dashCount = 0;
+      result = result.replace(/\s*—\s*/g, (match) => {
+        dashCount++;
+        if (dashCount > 1 && rng() < 0.4) {
+          changeCount++;
+          return rng() < 0.5 ? ', ' : '. ';
+        }
+        return match;
+      });
+    }
+
+    // ─── PASS 2g: "However" paragraph-start kill (Critical AI Tell) ───
+    // AI uses "However" to start paragraphs 3x more than humans
+    {
+      const howeverKills = [
+        [/^However,?\s*/gim, 'But '],
+        [/^Nonetheless,?\s*/gim, 'Still, '],
+        [/^In contrast,?\s*/gim, 'But '],
+        [/^On the contrary,?\s*/gim, 'But actually, '],
+      ];
+      howeverKills.forEach(([pattern, replacement]) => {
+        const before = result;
+        result = result.replace(pattern, (match) => {
+          if (rng() < 0.7) {
+            changeCount++;
+            return replacement;
+          }
+          return match;
+        });
+      });
+    }
+
+    // ─── PASS 2h: Filler phrase removal (Skill Pattern #22-23) ───
+    {
+      const fillerFixes = [
+        [/\bin order to\b/gi, 'to'],
+        [/\bdue to the fact that\b/gi, 'because'],
+        [/\bat the present time\b/gi, 'now'],
+        [/\bin the event that\b/gi, 'if'],
+        [/\bwith regard to\b/gi, 'about'],
+        [/\bfor the purpose of\b/gi, 'to'],
+        [/\bin the near future\b/gi, 'soon'],
+        [/\bprior to\b/gi, 'before'],
+        [/\bsubsequent to\b/gi, 'after'],
+        [/\bin close proximity to\b/gi, 'near'],
+        [/\ba large number of\b/gi, 'many'],
+        [/\bthe vast majority of\b/gi, 'most'],
+        [/\bit goes without saying that\b/gi, ''],
+        [/\bit is worth noting that\b/gi, ''],
+        [/\bit is important to note that\b/gi, ''],
+        [/\bneedless to say,?\s*/gi, ''],
+      ];
+      fillerFixes.forEach(([pattern, replacement]) => {
+        const before = result;
+        result = result.replace(pattern, replacement);
+        if (before !== result) changeCount++;
+      });
+    }
+
     // ─── PASS 3: Word unpredictability boost (moved earlier for better effect) ───
     {
       const words = Object.keys(VOCAB_SWAPS);

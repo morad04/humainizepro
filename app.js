@@ -540,6 +540,42 @@
     'opportunities': ['chances', 'openings', 'options'],
     'clarification': ['clearing things up', 'answers', 'explanations'],
     'outcomes': ['results', 'what happens', 'effects'],
+    // --- dandcg/claude-skills banned words ---
+    'unlock': ['open up', 'get access to', 'tap into'],
+    'unlocks': ['opens up', 'gives access to', 'taps into'],
+    'unlocking': ['opening up', 'getting access to', 'tapping into'],
+    'embark': ['start', 'begin', 'set out on'],
+    'embarks': ['starts', 'begins', 'sets out on'],
+    'embarking': ['starting', 'beginning', 'setting out on'],
+    'illuminate': ['explain', 'clear up', 'show'],
+    'illuminates': ['explains', 'clears up', 'shows'],
+    'illuminating': ['explaining', 'clearing up', 'showing'],
+    'unveil': ['show', 'reveal', 'share'],
+    'unveils': ['shows', 'reveals', 'shares'],
+    'unveiled': ['showed', 'revealed', 'shared'],
+    'harness': ['use', 'put to work', 'take advantage of'],
+    'harnessing': ['using', 'putting to work', 'taking advantage of'],
+    'navigate': ['get through', 'deal with', 'work through'],
+    'navigating': ['getting through', 'dealing with', 'working through'],
+    'navigates': ['gets through', 'deals with', 'works through'],
+    'revolutionize': ['change', 'shake up', 'rethink'],
+    'revolutionizing': ['changing', 'shaking up', 'rethinking'],
+    'revolutionizes': ['changes', 'shakes up', 'rethinks'],
+    'disruptive': ['bold', 'different', 'unconventional'],
+    'inquiries': ['questions', 'asks', 'requests'],
+    'stark': ['sharp', 'clear', 'obvious'],
+    'remarkable': ['notable', 'unusual', 'striking'],
+    'compelling': ['strong', 'convincing', 'interesting'],
+    'unprecedented': ['never seen before', 'first-of-its-kind', 'new'],
+    'substantive': ['real', 'solid', 'meaningful'],
+    'underscore': ['show', 'highlight', 'point to'],
+    'underscores': ['shows', 'highlights', 'points to'],
+    'elevate': ['raise', 'improve', 'lift'],
+    'elevates': ['raises', 'improves', 'lifts'],
+    'crafting': ['making', 'building', 'putting together'],
+    'crafted': ['made', 'built', 'put together'],
+    'skyrocket': ['jump', 'shoot up', 'surge'],
+    'skyrocketed': ['jumped', 'shot up', 'surged'],
   };
 
   // ═══════════════════════════════════════════════════════════
@@ -1026,17 +1062,16 @@
       });
     }
 
-    // ─── PASS 2f: Em dash reduction (Skill Pattern #13) ───
-    // AI overuses em dashes. Replace ~40% with commas or periods
+    // ─── PASS 2f: Em dash kill (dandcg Banned Pattern) ───
+    // dandcg skill: "Em dashes — replace with commas, periods, or semicolons"
+    // Kill ALL em dashes (biggest AI formatting tell)
     {
-      let dashCount = 0;
       result = result.replace(/\s*—\s*/g, (match) => {
-        dashCount++;
-        if (dashCount > 1 && rng() < 0.4) {
-          changeCount++;
-          return rng() < 0.5 ? ', ' : '. ';
-        }
-        return match;
+        changeCount++;
+        const roll = rng();
+        if (roll < 0.4) return ', ';
+        if (roll < 0.7) return '. ';
+        return '; ';
       });
     }
 
@@ -1061,7 +1096,7 @@
       });
     }
 
-    // ─── PASS 2h: Filler phrase removal (Skill Pattern #22-23) ───
+    // ─── PASS 2h: Filler phrase removal (Skill Pattern #22-23 + dandcg banned) ───
     {
       const fillerFixes = [
         [/\bin order to\b/gi, 'to'],
@@ -1080,6 +1115,23 @@
         [/\bit is worth noting that\b/gi, ''],
         [/\bit is important to note that\b/gi, ''],
         [/\bneedless to say,?\s*/gi, ''],
+        // --- dandcg banned phrases ---
+        [/\bin today's (?:world|digital landscape|era|age|society)\b/gi, 'these days'],
+        [/\bit'?s worth mentioning\b/gi, ''],
+        [/\bit should be noted\b/gi, ''],
+        [/\bas a matter of fact,?\s*/gi, ''],
+        [/\bthe fact of the matter is,?\s*/gi, ''],
+        [/\bhaving said that,?\s*/gi, 'Still, '],
+        [/\bwith that being said,?\s*/gi, 'Still, '],
+        [/\bat the end of the day,?\s*/gi, ''],
+        [/\bwhen it comes to\b/gi, 'for'],
+        [/\bremains to be seen\b/gi, 'we\'ll see'],
+        [/\bshed light on\b/gi, 'explain'],
+        [/\bdive deep into\b/gi, 'look closely at'],
+        [/\bdive deeper into\b/gi, 'look more closely at'],
+        [/\bthis comprehensive guide\b/gi, 'this guide'],
+        [/\blet'?s explore\b/gi, 'let\'s look at'],
+        [/\bever-evolving\b/gi, 'changing'],
       ];
       fillerFixes.forEach(([pattern, replacement]) => {
         const before = result;
@@ -1566,6 +1618,56 @@
       result = result.split('\n\n').filter(p => p.trim().length > 0).join('\n\n');
 
       result = result.trim();
+    }
+
+    // ─── PASS 12b: Self-audit — consecutive same-length sentence breaker ───
+    // dandcg skill: "Flag and fix any remaining uniform sentence patterns
+    // (3+ consecutive sentences of similar length)"
+    if (strength >= 2) {
+      const paragraphs = result.split(/\n\s*\n/);
+      const newParagraphs = paragraphs.map(para => {
+        const sentences = splitSentences(para);
+        if (sentences.length < 4) return para;
+
+        const wordCounts = sentences.map(s => getSentenceWordCount(s));
+        const newSentences = [...sentences];
+        let fixed = 0;
+
+        for (let i = 0; i < wordCounts.length - 2 && fixed < 2; i++) {
+          const a = wordCounts[i], b = wordCounts[i + 1], c = wordCounts[i + 2];
+          // 3 consecutive sentences within ±4 words of each other = uniform pattern
+          if (Math.abs(a - b) <= 4 && Math.abs(b - c) <= 4 && Math.abs(a - c) <= 4) {
+            // Break the middle one: either split it or make it very short
+            const mid = newSentences[i + 1];
+            const midWc = getSentenceWordCount(mid);
+
+            if (midWc > 14) {
+              // Split at a comma if possible
+              const commaIdx = mid.indexOf(', ');
+              if (commaIdx > 8 && commaIdx < mid.length - 8) {
+                const first = mid.substring(0, commaIdx) + '.';
+                const second = mid.substring(commaIdx + 2);
+                const secondCap = second.charAt(0).toUpperCase() + second.slice(1);
+                newSentences[i + 1] = first + ' ' + secondCap;
+                fixed++;
+                changeCount++;
+              }
+            } else if (midWc > 6 && i + 2 < newSentences.length - 1) {
+              // Merge with the next sentence
+              const merged = mid.replace(/[.!?]+\s*$/, '') + ', and ' +
+                newSentences[i + 2].charAt(0).toLowerCase() + newSentences[i + 2].slice(1);
+              newSentences[i + 1] = merged;
+              newSentences.splice(i + 2, 1);
+              wordCounts.splice(i + 2, 1);
+              fixed++;
+              changeCount++;
+            }
+          }
+        }
+
+        return newSentences.join(' ');
+      });
+      result = newParagraphs.join('\n\n');
     }
 
     // ═══════════════════════════════════════════════════════════

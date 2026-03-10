@@ -1,15 +1,12 @@
 /* ═══════════════════════════════════════════════════════
-   HUMAINIZE Pro — Text Enhancement Layer v4
+   HUMAINIZE Pro — Text Enhancement Layer v5
    
    Two modes: ACADEMIC and NORMAL
    - Academic: formal vocabulary, scholarly transitions, preserves meaning
    - Normal: casual tone, simple linking words
    
-   Both modes:
-   1. Normalize Unicode over-spacing
-   2. Smart punctuation
-   3. Grammar polish
-   4. Mode-specific transitions and vocabulary
+   Key innovation: Unicode-tolerant matching that handles invisible
+   characters and homoglyphs injected by the humanizer.
    
    DOES NOT MODIFY app.js — hooks via MutationObserver
    ═══════════════════════════════════════════════════════ */
@@ -21,9 +18,8 @@
     // MODE MANAGEMENT
     // ═══════════════════════════════════════════════════════════
 
-    var currentMode = 'academic'; // default
+    var currentMode = 'academic';
 
-    // Set up mode toggle buttons
     var academicBtn = document.getElementById('mode-academic');
     var normalBtn = document.getElementById('mode-normal');
 
@@ -41,6 +37,87 @@
     }
 
     // ═══════════════════════════════════════════════════════════
+    // UNICODE HELPERS
+    // The humanizer injects:
+    // - Zero-width chars: \u200B, \u200C, \u200D, \uFEFF
+    // - Homoglyphs: Cyrillic а(0430), е(0435), о(043E), с(0441),
+    //   р(0440), ѕ(0455), і(0456), х(0445), у(0443)
+    // - Various-width spaces: \u2000-\u200A, \u205F
+    // ═══════════════════════════════════════════════════════════
+
+    var INVISIBLE_CHARS = '\u200B\u200C\u200D\uFEFF';
+    var INVISIBLE_RE = /[\u200B\u200C\u200D\uFEFF]/g;
+
+    // Map of Latin chars to their Cyrillic homoglyphs
+    var HOMOGLYPH_MAP = {
+        '\u0430': 'a', '\u0435': 'e', '\u043E': 'o', '\u0441': 'c',
+        '\u0440': 'p', '\u0455': 's', '\u0456': 'i', '\u0445': 'x', '\u0443': 'y',
+        // Uppercase Cyrillic
+        '\u0410': 'A', '\u0415': 'E', '\u041E': 'O', '\u0421': 'C',
+        '\u0420': 'P', '\u0405': 'S', '\u0406': 'I', '\u0425': 'X', '\u0423': 'Y'
+    };
+
+    // Strip ALL invisible chars and normalize homoglyphs to Latin
+    function toPlainText(str) {
+        var result = '';
+        for (var i = 0; i < str.length; i++) {
+            var ch = str[i];
+            if (INVISIBLE_CHARS.indexOf(ch) !== -1) continue;
+            if (HOMOGLYPH_MAP[ch]) {
+                result += HOMOGLYPH_MAP[ch];
+            } else {
+                result += ch;
+            }
+        }
+        // Normalize Unicode spaces to regular spaces
+        result = result.replace(/[\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200A\u205F]/g, ' ');
+        return result;
+    }
+
+    // Build a regex that matches a phrase even with invisible chars
+    // between characters and homoglyphs replacing Latin chars.
+    // "swapping knowledge" -> s[invisible]*w[invisible]*a[invisible]*p...
+    function buildFuzzyRegex(phrase, flags) {
+        var zwc = '[\u200B\u200C\u200D\uFEFF]*';
+        var parts = [];
+
+        for (var i = 0; i < phrase.length; i++) {
+            var ch = phrase[i];
+            if (ch === ' ') {
+                // Space can be any Unicode space variant + optional zero-width chars
+                parts.push('[\u0020\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200A\u205F]' + zwc);
+            } else {
+                // For each Latin char, also match its Cyrillic homoglyph
+                var alts = getHomoglyphAlts(ch);
+                if (alts) {
+                    parts.push('[' + escapeRegexChar(ch) + alts + ']' + zwc);
+                } else {
+                    parts.push(escapeRegexChar(ch) + zwc);
+                }
+            }
+        }
+
+        return new RegExp(parts.join(''), flags || 'gi');
+    }
+
+    function getHomoglyphAlts(ch) {
+        var lower = ch.toLowerCase();
+        var map = { 'a': '\u0430', 'e': '\u0435', 'o': '\u043E', 'c': '\u0441', 'p': '\u0440', 's': '\u0455', 'i': '\u0456', 'x': '\u0445', 'y': '\u0443' };
+        if (map[lower]) {
+            if (ch === ch.toUpperCase() && ch !== ch.toLowerCase()) {
+                return map[lower].toUpperCase();
+            }
+            return map[lower];
+        }
+        return null;
+    }
+
+    function escapeRegexChar(ch) {
+        if ('\\^$.*+?()[]{}|'.indexOf(ch) !== -1) return '\\' + ch;
+        return ch;
+    }
+
+    // ═══════════════════════════════════════════════════════════
     // 1. UNICODE SPACE NORMALIZER
     // ═══════════════════════════════════════════════════════════
 
@@ -52,110 +129,101 @@
 
     // ═══════════════════════════════════════════════════════════
     // 2. ACADEMIC VOCABULARY RESTORATION
-    // The humanizer replaces formal words with casual alternatives.
-    // In Academic mode, we reverse these to preserve original meaning.
+    // Uses fuzzy matching to handle invisible chars + homoglyphs
     // ═══════════════════════════════════════════════════════════
 
-    var ACADEMIC_RESTORE = [
-        // Reverse of COLLOQUIAL_PHRASES from app.js
-        // casual → formal academic
-        { from: /\bmatters\b/gi, to: 'is significant' },
-        { from: /\bcounts\b/gi, to: 'is of importance' },
-        { from: /\bmakes a difference\b/gi, to: 'is significant' },
-        { from: /\bis a must\b/gi, to: 'is essential' },
-        { from: /\byou really need\b/gi, to: 'it is essential' },
-        { from: /\breally matters\b/gi, to: 'plays a significant role' },
-        { from: /\bhas a big impact\b/gi, to: 'has a considerable impact' },
-        { from: /\bmakes a real difference\b/gi, to: 'has a significant effect' },
-        { from: /\bworks as\b/gi, to: 'functions as' },
-        { from: /\bacts like\b/gi, to: 'functions as' },
-        { from: /\bis basically\b/gi, to: 'essentially serves as' },
-        { from: /\bat the end of the day\b/gi, to: 'fundamentally' },
-        { from: /\bwhen you get down to it\b/gi, to: 'at its core' },
-        { from: /\bso you can\b/gi, to: 'in order to' },
-        { from: /\bif you want to\b/gi, to: 'in order to' },
-        { from: /\bseeing as\b/gi, to: 'given that' },
-        { from: /\bwhen it comes to\b/gi, to: 'in the context of' },
-        { from: /\ball kinds of\b/gi, to: 'a wide range of' },
-        { from: /\blots of\b/gi, to: 'a considerable number of' },
-        { from: /\ba bunch of\b/gi, to: 'a variety of' },
-        { from: /\bthen again\b/gi, to: 'conversely' },
-        { from: /\bflip side though\b/gi, to: 'on the other hand' },
-        { from: /\bquite a bit\b/gi, to: 'substantially' },
-        { from: /\bpretty heavily\b/gi, to: 'to a considerable extent' },
-        { from: /\bthat's because\b/gi, to: 'this is attributable to' },
-        { from: /\bthe reason is\b/gi, to: 'this can be attributed to' },
-        { from: /\bit comes down to\b/gi, to: 'this is primarily due to' },
-        { from: /\bbecause of that\b/gi, to: 'consequently' },
-        { from: /\bwhich means\b/gi, to: 'consequently' },
+    var ACADEMIC_PHRASES = [
+        // [casual phrase from humanizer, formal academic replacement]
+        // These reverse the COLLOQUIAL_PHRASES from app.js
+        ['swapping knowledge', 'intellectual exchange'],
+        ['sharing ideas', 'intellectual exchange'],
+        ['learning from each other', 'collaborative learning'],
+        ['the biggest hurdle', 'the primary challenge'],
+        ['the main struggle', 'the key challenge'],
+        ['the hardest part', 'the most significant challenge'],
+        ['university-level English', 'academic English'],
+        ['the kind of English used in class', 'academic English'],
+        ['subject-specific words', 'discipline-specific vocabulary'],
+        ['field jargon', 'specialized terminology'],
+        ['technical terms for their subject', 'discipline-specific terminology'],
+        ['strong listening ability', 'advanced listening competence'],
+        ['the ability to follow complex speech', 'advanced listening skills'],
+        ['good ears for detail', 'attentive listening skills'],
+        ['speaking up on the spot', 'spontaneous verbal interaction'],
+        ['unscripted conversation', 'impromptu verbal exchange'],
+        ['jumping into discussions', 'active participation in discussions'],
+        ['actually speaking up', 'active verbal contribution'],
+        ['talking in class', 'classroom verbal participation'],
+        ['joining the conversation', 'engaging in discourse'],
+        ["thinking critically about what's being said", 'critical engagement'],
+        ['real engagement with the material', 'substantive engagement'],
+        ['pushing back on ideas', 'critical analysis'],
+        ['not participating as much', 'reduced participation'],
+        ['staying quiet', 'limited verbal contribution'],
+        ['pulling back', 'withdrawal from participation'],
+        ['how well they do in school', 'academic outcomes'],
+        ['stress about their English', 'language-related anxiety'],
+        ['nerves around language', 'linguistic apprehension'],
+        ['worry about speaking', 'communication anxiety'],
+        ['is still needed', 'remains necessary'],
+        ["what's already been written", 'the existing body of research'],
+        ['previous studies', 'prior research'],
+        ['past research', 'existing literature'],
 
-        // Reverse of academic-specific replacements
-        { from: /\bswapping knowledge\b/gi, to: 'intellectual exchange' },
-        { from: /\bsharing ideas\b/gi, to: 'intellectual exchange' },
-        { from: /\blearning from each other\b/gi, to: 'collaborative learning' },
-        { from: /\bthe biggest hurdle\b/gi, to: 'the primary challenge' },
-        { from: /\bthe main struggle\b/gi, to: 'the key challenge' },
-        { from: /\bthe hardest part\b/gi, to: 'the most significant challenge' },
-        { from: /\buniversity-level English\b/gi, to: 'academic English' },
-        { from: /\bthe kind of English used in class\b/gi, to: 'academic English' },
-        { from: /\bformal English\b/gi, to: 'academic English proficiency' },
-        { from: /\bsubject-specific words\b/gi, to: 'discipline-specific vocabulary' },
-        { from: /\bfield jargon\b/gi, to: 'specialized terminology' },
-        { from: /\btechnical terms for their subject\b/gi, to: 'discipline-specific terminology' },
-        { from: /\bstrong listening ability\b/gi, to: 'advanced listening competence' },
-        { from: /\bthe ability to follow complex speech\b/gi, to: 'advanced listening skills' },
-        { from: /\bgood ears for detail\b/gi, to: 'attentive listening skills' },
-        { from: /\bspeaking up on the spot\b/gi, to: 'spontaneous verbal interaction' },
-        { from: /\bunscripted conversation\b/gi, to: 'impromptu verbal exchange' },
-        { from: /\bjumping into discussions\b/gi, to: 'active participation in discussions' },
-        { from: /\bactually speaking up\b/gi, to: 'active verbal contribution' },
-        { from: /\btalking in class\b/gi, to: 'classroom verbal participation' },
-        { from: /\bjoining the conversation\b/gi, to: 'engaging in discourse' },
-        { from: /\bthinking critically about what's being said\b/gi, to: 'critical engagement' },
-        { from: /\breal engagement with the material\b/gi, to: 'substantive engagement' },
-        { from: /\bpushing back on ideas\b/gi, to: 'critical analysis' },
-        { from: /\bnot participating as much\b/gi, to: 'reduced participation' },
-        { from: /\bstaying quiet\b/gi, to: 'limited verbal contribution' },
-        { from: /\bpulling back\b/gi, to: 'withdrawal from participation' },
-        { from: /\bgrades\b/gi, to: 'academic performance' },
-        { from: /\bhow well they do in school\b/gi, to: 'academic outcomes' },
-        { from: /\btheir results\b/gi, to: 'academic performance' },
-        { from: /\bstress about their English\b/gi, to: 'language-related anxiety' },
-        { from: /\bnerves around language\b/gi, to: 'linguistic apprehension' },
-        { from: /\bworry about speaking\b/gi, to: 'communication anxiety' },
-        { from: /\bis still needed\b/gi, to: 'remains necessary' },
-        { from: /\bpast research\b/gi, to: 'existing literature' },
-        { from: /\bwhat's already been written\b/gi, to: 'the existing body of research' },
-        { from: /\bprevious studies\b/gi, to: 'prior research' },
+        // Reverse of standard COLLOQUIAL_PHRASES
+        ['makes a difference', 'is significant'],
+        ['is a must', 'is essential'],
+        ['you really need', 'it is essential'],
+        ['really matters', 'plays a significant role'],
+        ['has a big impact', 'has a considerable impact'],
+        ['makes a real difference', 'has a significant effect'],
+        ['works as', 'functions as'],
+        ['acts like', 'functions as'],
+        ['is basically', 'essentially serves as'],
+        ['at the end of the day', 'fundamentally'],
+        ['when you get down to it', 'at its core'],
+        ['so you can', 'in order to'],
+        ['if you want to', 'in order to'],
+        ['seeing as', 'given that'],
+        ['when it comes to', 'in the context of'],
+        ['all kinds of', 'a wide range of'],
+        ['lots of', 'a considerable number of'],
+        ['a bunch of', 'a variety of'],
+        ['flip side though', 'on the other hand'],
+        ['quite a bit', 'substantially'],
+        ['pretty heavily', 'to a considerable extent'],
+        ["that's because", 'this is attributable to'],
+        ['it comes down to', 'this is primarily due to'],
+        ['because of that', 'consequently'],
+        ['really affect', 'significantly influence'],
+        ['really affects', 'significantly influences'],
+        ['really shape', 'fundamentally affect'],
+        ['have a real impact on', 'directly influence'],
+        ['has a real impact on', 'directly influences'],
+        ['means getting used to', 'involves adapting to'],
+        ['is about learning', 'involves acquiring proficiency in'],
+        ['comes down to learning', 'centres on developing'],
+        ['means adjusting', 'involves adapting'],
+        ['is really about adjusting', 'fundamentally involves adapting'],
+        ['comes down to adjusting', 'primarily involves adapting'],
 
-        // Reverse VOCAB_SWAPS
-        { from: /\breally affect\b/gi, to: 'significantly influence' },
-        { from: /\breally affects\b/gi, to: 'significantly influences' },
-        { from: /\breally shape\b/gi, to: 'fundamentally affect' },
-        { from: /\bhave a real impact on\b/gi, to: 'directly influence' },
-        { from: /\bhas a real impact on\b/gi, to: 'directly influences' },
-        { from: /\bmeans getting used to\b/gi, to: 'involves adapting to' },
-        { from: /\bis about learning\b/gi, to: 'involves acquiring proficiency in' },
-        { from: /\bcomes down to learning\b/gi, to: 'centres on developing' },
-        { from: /\bmeans adjusting\b/gi, to: 'involves adapting' },
-        { from: /\bis really about adjusting\b/gi, to: 'fundamentally involves adapting' },
-        { from: /\bcomes down to adjusting\b/gi, to: 'primarily involves adapting' },
-
-        // Common informal → formal
-        { from: /\bget\b/gi, to: 'obtain' },
-        { from: /\bgot\b/gi, to: 'obtained' },
-        { from: /\bbig\b/gi, to: 'significant' },
-        { from: /\bkids\b/gi, to: 'children' },
-        { from: /\bstuff\b/gi, to: 'material' },
-        { from: /\bshow\b(?!\s+that)/gi, to: 'demonstrate' },
-        { from: /\bhelp\b/gi, to: 'facilitate' },
-        { from: /\bgood\b/gi, to: 'effective' },
-        { from: /\bbad\b/gi, to: 'adverse' },
-        { from: /\bhard\b/gi, to: 'challenging' },
-        { from: /\beasy\b/gi, to: 'straightforward' },
-        { from: /\blike\b(?=\s+\w)/gi, to: 'such as' },
-        { from: /\ba lot\b/gi, to: 'considerably' },
+        // Passive voice & formal alternatives
+        ['play right into', 'directly affect'],
+        ['hit', 'impact'],
+        ["can't skip", 'is essential'],
+        ['global ways of looking at things', 'global perspectives'],
+        ['ways of looking at things', 'perspectives'],
     ];
+
+    function restoreAcademicVocabulary(text) {
+        for (var i = 0; i < ACADEMIC_PHRASES.length; i++) {
+            var casual = ACADEMIC_PHRASES[i][0];
+            var formal = ACADEMIC_PHRASES[i][1];
+            var fuzzyRe = buildFuzzyRegex(casual, 'gi');
+            text = text.replace(fuzzyRe, formal);
+        }
+        return text;
+    }
 
     // ═══════════════════════════════════════════════════════════
     // 3. TRANSITIONS — Mode-specific
@@ -186,7 +254,6 @@
     // ═══════════════════════════════════════════════════════════
 
     function fixPunctuation(text) {
-        // Introductory phrase comma insertion
         var introductory = [
             'however', 'therefore', 'meanwhile', 'furthermore',
             'nonetheless', 'nevertheless', 'similarly', 'additionally',
@@ -211,12 +278,10 @@
             });
         }
 
-        // Comma before coordinating conjunctions
         text = text.replace(/([a-z\u0430-\u044F]{3,})\s+(but|yet)\s+([a-z\u0430-\u044F])/gi, function (m, before, conj, after) {
             return before + ', ' + conj + ' ' + after;
         });
 
-        // Fix punctuation errors
         text = text.replace(/ ([.,;:!?])/g, '$1');
         text = text.replace(/([.,;:!?])([A-Z\u0410-\u042F])/g, '$1 $2');
         text = text.replace(/\.\.(?!\.)/g, '.');
@@ -232,27 +297,22 @@
     // ═══════════════════════════════════════════════════════════
 
     function fixGrammar(text) {
-        // Capitalize first letter
         if (text.length > 0 && /[a-z\u0430-\u044F]/.test(text.charAt(0))) {
             text = text.charAt(0).toUpperCase() + text.slice(1);
         }
 
-        // Capitalize after sentence endings
         text = text.replace(/([.!?])\s+([a-z\u0430-\u044F])/g, function (m, punct, letter) {
             return punct + ' ' + letter.toUpperCase();
         });
 
-        // Fix "a" before vowel sounds
+        // a/an before vowel sounds
         text = text.replace(/\ba\s+(a(?:cademic|ctive|ctual|dult|ffect|gree|lter|mazin|nother|pproach|rticle|ssess|ttempt|ware))/gi, 'an $1');
         text = text.replace(/\ba\s+(e(?:arly|ffect|ffort|lement|motion|nglish|nviron|ssential|stimate|vent|vening|xample|xercise|xperi))/gi, 'an $1');
         text = text.replace(/\ba\s+(i(?:dea|mage|mpact|mport|ncrease|ndivid|nfluence|nstance|nterest|nterview|nvest|ssue|tem))/gi, 'an $1');
         text = text.replace(/\ba\s+(o(?:bject|bserv|bstacle|ccasion|ffer|lder|pen|pinion|pportun|ption|rder|rganiz|ther|utcome|utline|verview))/gi, 'an $1');
         text = text.replace(/\ba\s+(u(?:ltimate|nderstand|nfair|niqu|niversit|nusual|pdate|rban))/gi, 'an $1');
 
-        // Doubled words
         text = text.replace(/\b(\w{2,})\s+\1\b/gi, '$1');
-
-        // Orphaned punctuation at line start
         text = text.replace(/^\s*[,;:]\s*/gm, '');
 
         return text;
@@ -263,18 +323,15 @@
     // ═══════════════════════════════════════════════════════════
 
     function addNaturalCommas(text) {
-        // Before "which" (non-restrictive)
         text = text.replace(/(\w)\s+which\s+/gi, function (m, before) {
             if (before === ',') return m;
             return before + ', which ';
         });
 
-        // Before "where" in relative clauses
         text = text.replace(/(\w)\s+where\s+((?:the|a|an|this|that|these|those|their|its|our|my|your)\s)/gi, function (m, before, rest) {
             return before + ', where ' + rest;
         });
 
-        // After long introductory subordinate clauses
         text = text.replace(/((?:When|While|If|Although|Because|Since|Before|After|As|Unless|Until|Once)\s+[^,]{15,50}?)\s+(the|a|an|this|they|we|he|she|it|I|you)\s/gi,
             function (m, intro, subject) {
                 if (intro.indexOf(',') !== -1) return m;
@@ -298,7 +355,7 @@
         concession: ['although', 'while', 'despite', 'yet', 'even', 'admit']
     };
 
-    var HAS_TRANSITION = /^(however|but|yet|still|also|moreover|furthermore|in addition|besides|therefore|thus|consequently|for example|for instance|in fact|actually|though|meanwhile|nonetheless|nevertheless|on the other hand|similarly|likewise|as a result|in contrast|so|and|then|after|while|although|even though|that said|plus|on top of that|overall|all in all|to sum up|because|since|due to|the reason|not only|along with|besides this|the point|which is why|as a matter|in other words|to be fair|at the same time|having said|the truth is|the key|additionally|accordingly|conversely|notably|significantly|indeed|crucially)/i;
+    var HAS_TRANSITION = /^(however|but|yet|still|also|moreover|furthermore|in addition|besides|therefore|thus|consequently|for example|for instance|in fact|actually|though|meanwhile|nonetheless|nevertheless|on the other hand|similarly|likewise|as a result|in contrast|so|and|then|after|while|although|even though|that said|plus|on top of that|overall|all in all|to sum up|because|since|due to|the reason|not only|along with|besides this|the point|which is why|in other words|to be fair|at the same time|having said|the truth is|the key|additionally|accordingly|conversely|notably|significantly|indeed|crucially)/i;
 
     function classifySentence(s) {
         var lower = s.toLowerCase();
@@ -322,14 +379,14 @@
 
         var result = [parts[0]];
         var added = 0;
-        var maxAdd = Math.max(1, Math.floor(parts.length * 0.2));
+        var maxAdd = Math.max(1, Math.floor(parts.length * 0.25));
 
         for (var i = 1; i < parts.length; i++) {
             var s = parts[i];
             if (!s || s.length < 15) { result.push(s); continue; }
             if (HAS_TRANSITION.test(s)) { result.push(s); continue; }
 
-            if (added < maxAdd && Math.random() < 0.25 && s.length > 30) {
+            if (added < maxAdd && Math.random() < 0.3 && s.length > 25) {
                 var type = classifySentence(s) || 'addition';
                 var transition = pickRandom(transitions[type] || transitions.addition);
                 var lowered = s.charAt(0).toLowerCase() + s.slice(1);
@@ -344,7 +401,7 @@
     }
 
     // ═══════════════════════════════════════════════════════════
-    // 8. SENTENCE VARIETY (merge choppy sentences)
+    // 8. SENTENCE VARIETY
     // ═══════════════════════════════════════════════════════════
 
     function improveSentenceVariety(text) {
@@ -393,11 +450,9 @@
         // Step 1: Fix over-spacing
         var result = normalizeSpaces(text);
 
-        // Step 2: Academic vocabulary restoration (only in academic mode)
+        // Step 2: Academic vocabulary restoration (fuzzy Unicode-aware)
         if (currentMode === 'academic') {
-            for (var i = 0; i < ACADEMIC_RESTORE.length; i++) {
-                result = result.replace(ACADEMIC_RESTORE[i].from, ACADEMIC_RESTORE[i].to);
-            }
+            result = restoreAcademicVocabulary(result);
         }
 
         // Step 3: Smart punctuation

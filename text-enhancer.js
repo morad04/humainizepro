@@ -1,195 +1,192 @@
 /* ═══════════════════════════════════════════════════════
-   HUMAINIZE Pro — Text Enhancement Layer
+   HUMAINIZE Pro — Text Enhancement Layer v2
    Post-processing: grammar polish, linking words,
    sentence flow — WITHOUT modifying app.js
-   Uses MutationObserver to intercept humanized output
+   
+   CRITICAL: the humanizer uses invisible Unicode chars
+   (zero-width spaces, look-alike Cyrillic letters, etc.)
+   We must preserve those while enhancing grammar/flow.
    ═══════════════════════════════════════════════════════ */
 
 (function () {
     'use strict';
 
     // ═══════════════════════════════════════════════════════════
-    // LINKING WORDS & TRANSITIONS
-    // Natural human transitions grouped by function
+    // LINKING WORDS & TRANSITIONS (natural, human-sounding)
     // ═══════════════════════════════════════════════════════════
 
-    const TRANSITIONS = {
+    var TRANSITIONS = {
         addition: [
-            'also', 'besides', 'plus', 'on top of that', 'along with this',
-            'not only that but', "what's more", "and then there's the fact that",
-            'another thing is', "it's also worth adding that"
+            'Also', 'Besides', 'Plus', 'On top of that', 'Along with this',
+            'Not only that but', 'Another thing is'
         ],
         contrast: [
-            'but', 'still', 'yet', 'though', 'even so', 'all the same',
-            'that said', 'on the other hand', 'then again', 'at the same time',
-            'mind you', 'having said that', 'even though'
+            'But', 'Still', 'Yet', 'Though', 'Even so',
+            'That said', 'Then again', 'At the same time',
+            'Having said that'
         ],
         cause: [
-            'because of this', 'since', 'the reason is', 'this is mainly because',
-            'this happens because', 'one reason for this is', 'due to this',
-            'thanks to this', 'what causes this is'
+            'Because of this', 'Since', 'The reason is',
+            'This happens because', 'One reason for this is',
+            'Due to this'
         ],
         result: [
-            'so', 'as a result', 'because of that', 'this means',
-            'this leads to', 'which is why', "and that's why",
-            'the outcome is', 'this ends up causing', 'the effect is'
+            'So', 'As a result', 'Because of that', 'This means',
+            'This leads to', 'Which is why',
+            'The outcome is', 'The effect is'
         ],
         example: [
-            'for example', 'for instance', 'to illustrate',
-            'take this case', 'a good example is', 'to give you an idea',
-            'say for example', 'one case of this is', 'you can see this when'
+            'For example', 'For instance', 'To illustrate',
+            'Take this case', 'A good example is',
+            'Say for example', 'You can see this when'
         ],
         emphasis: [
-            'in fact', 'actually', 'the truth is', 'really',
-            'what matters most is', 'the key thing here is',
-            "it's important to realize", 'the point is'
+            'In fact', 'Actually', 'The truth is', 'Really',
+            'What matters most is', 'The key thing here is',
+            'The point is'
         ],
         summary: [
-            'overall', 'all in all', 'in short', 'to sum up',
-            'the bottom line is', 'when you look at the big picture',
-            'putting it all together', 'in the end'
+            'Overall', 'All in all', 'In short', 'To sum up',
+            'The bottom line is', 'Putting it all together', 'In the end'
         ]
     };
 
-    // ═══════════════════════════════════════════════════════════
-    // GRAMMAR FIXES
-    // Common grammar issues that appear after humanization
-    // ═══════════════════════════════════════════════════════════
-
-    const GRAMMAR_FIXES = [
-        // Double spaces
-        { match: /  +/g, replace: ' ' },
-        // Double periods
-        { match: /\.\.(?!\.)/g, replace: '.' },
-        // Space before punctuation
-        { match: / ([.,;:!?])/g, replace: '$1' },
-        // Missing space after punctuation
-        { match: /([.!?])([A-Z])/g, replace: '$1 $2' },
-        // Repeated words
-        { match: /\b(\w+)\s+\1\b/gi, replace: '$1' },
-        // Fix "a" before vowel sounds
-        { match: /\ba\s+(a|e|i|o|u)/gi, replace: 'an $1' },
-        // Fix "an" before consonant sounds
-        { match: /\ban\s+(b|c|d|f|g|j|k|l|m|n|p|q|r|s|t|v|w|x|y|z)\w/gi, replace: function (m) { return 'a ' + m.slice(3); } },
-        // Capitalize after period
-        { match: /\.\s+([a-z])/g, replace: function (m, p1) { return '. ' + p1.toUpperCase(); } },
-        // Capitalize first letter
-        { match: /^([a-z])/, replace: function (m, p1) { return p1.toUpperCase(); } },
-        // Fix " , "
-        { match: /\s,\s/g, replace: ', ' },
-        // Remove trailing whitespace before period
-        { match: /\s+\./g, replace: '.' },
-        // Fix multiple commas
-        { match: /,\s*,/g, replace: ',' },
-    ];
-
-    // ═══════════════════════════════════════════════════════════
-    // SENTENCE FLOW ENHANCERS
-    // ═══════════════════════════════════════════════════════════
-
-    const SENTENCE_KEYWORDS = {
-        addition: ['also', 'another', 'additional', 'more', 'further', 'other', 'second', 'third'],
-        contrast: ['but', 'however', 'although', 'despite', 'unlike', 'different', 'opposite', 'instead', 'whereas', 'challenge'],
-        cause: ['because', 'since', 'due', 'reason', 'cause', 'factor', 'lead', 'stem'],
-        result: ['result', 'therefore', 'consequently', 'effect', 'outcome', 'impact', 'lead to', 'thus'],
-        example: ['example', 'instance', 'case', 'such as', 'like', 'illustrate', 'demonstrate'],
+    // Keywords that hint at what transition type to use
+    var SENTENCE_HINTS = {
+        addition: ['also', 'another', 'additional', 'more', 'further', 'other'],
+        contrast: ['but', 'however', 'although', 'despite', 'unlike', 'different', 'challenge', 'struggle'],
+        cause: ['because', 'since', 'due', 'reason', 'cause', 'factor'],
+        result: ['result', 'effect', 'outcome', 'impact', 'lead', 'thus'],
+        example: ['example', 'instance', 'case', 'such as', 'illustrate']
     };
 
     function classifySentence(sentence) {
         var lower = sentence.toLowerCase();
-        for (var type in SENTENCE_KEYWORDS) {
-            var keywords = SENTENCE_KEYWORDS[type];
-            for (var k = 0; k < keywords.length; k++) {
-                if (lower.indexOf(keywords[k]) !== -1) return type;
+        for (var type in SENTENCE_HINTS) {
+            var hints = SENTENCE_HINTS[type];
+            for (var k = 0; k < hints.length; k++) {
+                if (lower.indexOf(hints[k]) !== -1) return type;
             }
         }
         return null;
     }
 
+    function pickRandom(arr) {
+        return arr[Math.floor(Math.random() * arr.length)];
+    }
+
     function pickTransition(type) {
         if (!type || !TRANSITIONS[type]) {
-            var neutral = ['also', 'in addition', 'besides this', 'on top of that', "what's more"];
-            return neutral[Math.floor(Math.random() * neutral.length)];
+            return pickRandom(['Also', 'In addition', 'Besides this', 'On top of that', 'Plus']);
         }
-        var choices = TRANSITIONS[type];
-        return choices[Math.floor(Math.random() * choices.length)];
+        return pickRandom(TRANSITIONS[type]);
     }
 
     // ═══════════════════════════════════════════════════════════
-    // MAIN ENHANCEMENT PIPELINE
+    // GRAMMAR ENHANCEMENT
+    // Works on the cleaned visible text only
     // ═══════════════════════════════════════════════════════════
 
-    function enhanceText(text) {
-        if (!text || text.trim().length < 20) return text;
+    function fixGrammar(text) {
+        // Double/triple spaces -> single space (but careful with Unicode)
+        text = text.replace(/(\s){3,}/g, ' ');
 
-        var result = text;
+        // Double periods
+        text = text.replace(/\.\.(?!\.)/g, '.');
 
-        // 1. Apply grammar fixes
-        for (var i = 0; i < GRAMMAR_FIXES.length; i++) {
-            result = result.replace(GRAMMAR_FIXES[i].match, GRAMMAR_FIXES[i].replace);
+        // Space before punctuation
+        text = text.replace(/ ([.,;:!?])/g, '$1');
+
+        // Missing space after sentence-ending punctuation before uppercase
+        text = text.replace(/([.!?])([A-Z])/g, '$1 $2');
+
+        // Fix "a" before vowel sounds (only clear cases)
+        text = text.replace(/\ba (a[bcdfghjklmnpqrstvwxyz])/gi, 'an $1');
+        text = text.replace(/\ba (e[bcdfghjklmnpqrstvwxyz])/gi, 'an $1');
+        text = text.replace(/\ba (i[bcdfghjklmnpqrstvwxyz])/gi, 'an $1');
+        text = text.replace(/\ba (o[bcdfghjklmnpqrstvwxyz])/gi, 'an $1');
+        text = text.replace(/\ba (u[bcdfghjklmnpqrstvwxyz])/gi, 'an $1');
+
+        // Capitalize first letter of text
+        if (text.length > 0 && /[a-z]/.test(text.charAt(0))) {
+            text = text.charAt(0).toUpperCase() + text.slice(1);
         }
 
-        // 2. Add natural linking words between sentences that lack transitions
-        result = addLinkingWords(result);
+        // Fix multiple commas
+        text = text.replace(/,\s*,/g, ',');
 
-        // 3. Final grammar cleanup
-        result = result.replace(/  +/g, ' ');
-        result = result.replace(/^\s+/gm, '');
-
-        return result;
+        return text;
     }
 
-    function addLinkingWords(text) {
-        var sentences = text.split(/(?<=[.!?])\s+/);
-        if (sentences.length < 3) return text;
+    // ═══════════════════════════════════════════════════════════
+    // LINKING WORD INJECTION
+    // Only works on sentence boundaries — preserves everything else
+    // ═══════════════════════════════════════════════════════════
 
-        var enhanced = [sentences[0]];
+    var ALREADY_HAS_TRANSITION = /^(however|but|yet|still|also|moreover|furthermore|in addition|besides|therefore|thus|consequently|for example|for instance|in fact|actually|though|meanwhile|nonetheless|nevertheless|on the other hand|similarly|likewise|as a result|in contrast|so|and|then|after|while|although|even though|that said|plus|on top of that|overall|all in all|to sum up|because|since|due to|the reason)/i;
 
-        var startsWithTransition = /^(however|but|yet|still|also|moreover|furthermore|in addition|besides|therefore|thus|consequently|for example|for instance|in fact|actually|though|meanwhile|nonetheless|nevertheless|on the other hand|similarly|likewise|as a result|in contrast|so|and|then|next|after|before|while|although|even though|that said|the thing is|what's more|plus|on top of that)/i;
+    function addTransitions(text) {
+        // Split on sentence-ending punctuation followed by space
+        var parts = text.split(/(?<=[.!?])\s+/);
+        if (parts.length < 3) return text;
 
-        var transitionsAdded = 0;
-        var maxTransitions = Math.max(1, Math.floor(sentences.length * 0.15));
+        var result = [parts[0]];
+        var added = 0;
+        var maxAdd = Math.max(1, Math.floor(parts.length * 0.2)); // up to 20%
 
-        for (var i = 1; i < sentences.length; i++) {
-            var sentence = sentences[i].trim();
-            if (!sentence) continue;
-
-            // Skip if sentence already starts with a transition
-            if (startsWithTransition.test(sentence)) {
-                enhanced.push(sentence);
+        for (var i = 1; i < parts.length; i++) {
+            var s = parts[i];
+            if (!s || s.length < 20) {
+                result.push(s);
                 continue;
             }
 
-            // Only add transitions to ~25% of eligible sentences
-            var shouldAdd = transitionsAdded < maxTransitions &&
-                Math.random() < 0.25 &&
-                sentence.length > 30;
+            // Don't add if already has a transition
+            if (ALREADY_HAS_TRANSITION.test(s)) {
+                result.push(s);
+                continue;
+            }
 
-            if (shouldAdd) {
-                var type = classifySentence(sentence);
+            // Probabilistic — ~30% chance, capped by maxAdd
+            if (added < maxAdd && Math.random() < 0.30 && s.length > 30) {
+                var type = classifySentence(s);
                 var transition = pickTransition(type);
-                var capitalizedTransition = transition.charAt(0).toUpperCase() + transition.slice(1);
-                var lowerFirst = sentence.charAt(0).toLowerCase() + sentence.slice(1);
-                enhanced.push(capitalizedTransition + ', ' + lowerFirst);
-                transitionsAdded++;
+
+                // Lowercase the first char of the sentence
+                var lowered = s.charAt(0).toLowerCase() + s.slice(1);
+                result.push(transition + ', ' + lowered);
+                added++;
             } else {
-                enhanced.push(sentence);
+                result.push(s);
             }
         }
 
-        return enhanced.join(' ');
+        return result.join(' ');
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // MAIN PIPELINE
+    // ═══════════════════════════════════════════════════════════
+
+    function enhance(text) {
+        if (!text || text.length < 30) return text;
+        var result = fixGrammar(text);
+        result = addTransitions(result);
+        return result;
     }
 
     // ═══════════════════════════════════════════════════════════
     // MUTATION OBSERVER — Hook into app.js output
+    // We read innerHTML, extract the text div, enhance text,
+    // and write back preserving the HTML structure
     // ═══════════════════════════════════════════════════════════
 
     var outputEl = document.getElementById('text-output');
     if (!outputEl) return;
 
-    var lastProcessedText = '';
+    var lastRawHTML = '';
 
-    var observer = new MutationObserver(function (mutations) {
+    var observer = new MutationObserver(function () {
         // Don't process empty states
         if (outputEl.classList.contains('empty')) return;
 
@@ -197,30 +194,31 @@
         var textDiv = outputEl.querySelector('div[style*="pre-wrap"]');
         if (!textDiv) return;
 
-        var rawText = textDiv.textContent;
-        if (!rawText || rawText === lastProcessedText || rawText.length < 20) return;
+        var currentHTML = textDiv.innerHTML;
 
-        // Avoid infinite loop
-        lastProcessedText = rawText;
+        // Avoid re-processing the same content
+        if (!currentHTML || currentHTML === lastRawHTML || currentHTML.length < 30) return;
 
-        // Disconnect briefly to prevent re-triggering
+        lastRawHTML = currentHTML;
+
+        // Disconnect to prevent loop
         observer.disconnect();
 
-        // Enhance the text
-        var enhanced = enhanceText(rawText);
+        // The innerHTML is the escaped text with invisible Unicode chars
+        // We enhance it directly — the Unicode chars are part of the char stream
+        // and our regex-based fixes work on them without issue
+        var enhanced = enhance(currentHTML);
 
-        // Only update if the text actually changed
-        if (enhanced !== rawText) {
-            textDiv.textContent = enhanced;
+        if (enhanced !== currentHTML) {
+            textDiv.innerHTML = enhanced;
         }
 
-        lastProcessedText = textDiv.textContent;
+        lastRawHTML = textDiv.innerHTML;
 
-        // Reconnect observer
+        // Reconnect
         observer.observe(outputEl, { childList: true, subtree: true, characterData: true });
     });
 
-    // Start observing
     observer.observe(outputEl, { childList: true, subtree: true, characterData: true });
 
 })();

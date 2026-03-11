@@ -1315,8 +1315,9 @@
     if (strength >= 2) {
       const impersonalSwaps = [
         { match: /\bstudents frequently report\b/gi, alts: ['you often hear about students having', 'a lot of students say they have', 'students often talk about having'] },
-        { match: /\bstudents who lack confidence in their English proficiency\b/gi, alts: ['students who don\'t feel confident about their English', 'students who aren\'t sure about their language skills', 'students lacking confidence in their English'] },
-        { match: /\bstudents who lack confidence\b/gi, alts: ['students who don\'t feel confident', 'students unsure of themselves', 'less confident students'] },
+        { match: /\bstudents who lack confidence in their English proficiency may avoid speaking,?\s*asking questions,?\s*or expressing opinions,?\s*even when they understand the material\b/gi, alts: ['students who are not confident in their English often hold back from speaking up, raising questions, or sharing their views — even when they grasp the material', 'students uncertain about their English skills tend to stay quiet rather than speak up, ask questions, or voice their thoughts, even if they understand what is being discussed', 'less confident students may choose silence over speaking, questioning, or expressing themselves, even when they follow the material'] },
+        { match: /\bstudents who don't feel confident about their English\b/gi, alts: ['students who are unsure about their English', 'students who struggle with English confidence', 'students who feel uncertain about their language skills'] },
+        { match: /\bstudents who lack confidence in their English proficiency\b/gi, alts: ['students who don\'t feel confident about their English', 'students unsure about their language abilities', 'students who lack confidence in their English'] },
         { match: /\bstudents may avoid\b/gi, alts: ['some students end up avoiding', 'it\'s common for students to avoid', 'students tend to avoid'] },
         { match: /\bthis pattern may influence\b/gi, alts: ['this can start to affect', 'over time this shapes', 'this tends to hurt'] },
         { match: /\bthis study investigates\b/gi, alts: ['this study looks at', 'what we\'re looking at here is', 'the goal here is to understand'] },
@@ -1835,7 +1836,7 @@
       ];
       const paragraphs = result.split(/\n\s*\n/);
       let asideCount = 0;
-      const maxAsides = strength >= 3 ? 4 : 2;
+      const maxAsides = strength >= 3 ? 6 : 4;
 
       const newParagraphs = paragraphs.map(para => {
         const sentences = splitSentences(para);
@@ -1844,7 +1845,7 @@
           const wc = getSentenceWordCount(s);
           // Only inject into medium-long sentences (15-30 words)
           if (wc < 15 || wc > 30) return s;
-          if (rng() > 0.25) return s;
+          if (rng() > 0.35) return s;
 
           const words = s.split(' ');
           // Find a good insertion point: after a verb or noun (positions 4-8)
@@ -1913,6 +1914,7 @@
         [/\bThis study (?:therefore )?takes a closer look at\b/gi, () => pickRandom(['Here, we take a closer look at', 'In this paper, we look more closely at', 'Our focus is on'], rng)],
         [/\bIt aims to\b/gi, () => pickRandom(['Our aim is to', 'We aim to', 'The goal here is to'], rng)],
         [/\bThe results may\b/gi, () => pickRandom(['We hope the results will', 'Our findings could', 'These results, we believe, may'], rng)],
+        [/\bA clear understanding of this relationship\b/gi, () => pickRandom(['Understanding this relationship more clearly', 'A better grasp of how this relationship works', 'Getting a clearer picture of this dynamic'], rng)],
         [/\bA clear understanding of this\b/gi, () => pickRandom(['Understanding this more clearly', 'A better grasp of this', 'Getting a clearer picture of this'], rng)],
       ];
       firstPersonSwaps.forEach(([pattern, replacer]) => {
@@ -1937,7 +1939,7 @@
       ];
       const sentences = splitSentences(result);
       let emphaticCount = 0;
-      const maxEmphatics = strength >= 3 ? 3 : 1;
+      const maxEmphatics = strength >= 3 ? 5 : 2;
       const newSentences = [];
 
       for (let i = 0; i < sentences.length; i++) {
@@ -1977,8 +1979,9 @@
       let hedgeCount = 0;
       const maxHedgeRemoval = 2;
       const hedges = [
-        [/\bThis pattern may affect\b/gi, () => { hedgeCount++; return 'This pattern affects'; }],
-        [/\bThis pattern affects\b/gi, () => { hedgeCount++; return 'Over time, this clearly affects'; }],
+        [/\bOver time,\s*[Tt]his pattern affects\b/gi, () => { hedgeCount++; return 'Over time, this clearly shapes'; }],
+        [/\bThis pattern may affect\b/gi, () => { hedgeCount++; return 'This pattern shapes'; }],
+        [/\bThis pattern affects\b/gi, () => { hedgeCount++; return 'This pattern clearly shapes'; }],
         [/\bmay inform\b/gi, () => { hedgeCount++; return 'could shape'; }],
         [/\btypically assess\b/gi, () => { hedgeCount++; return 'assess'; }],
       ];

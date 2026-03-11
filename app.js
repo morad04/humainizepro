@@ -845,12 +845,14 @@
     { match: /\bactive verbal contribution\b/gi, alts: ['actually speaking up', 'talking in class', 'joining the conversation'] },
     { match: /\bcritical engagement\b/gi, alts: ['thinking critically about what\'s being said', 'real engagement with the material', 'pushing back on ideas'] },
     { match: /\breduced participation\b/gi, alts: ['not participating as much', 'staying quiet', 'pulling back'] },
-    { match: /\bacademic performance\b/gi, alts: ['grades', 'how well they do in school', 'their results'] },
+    { match: /\bmeasurable academic performance\b/gi, alts: ['actual academic results', 'demonstrable academic progress', 'concrete academic outcomes'] },
+    { match: /\bacademic performance\b/gi, alts: ['academic results', 'academic progress', 'their grades'] },
     { match: /\blanguage-related anxiety\b/gi, alts: ['stress about their English', 'nerves around language', 'worry about speaking'] },
     { match: /\bremains necessary\b/gi, alts: ['is still needed', 'hasn\'t been done yet', 'matters a lot'] },
-    { match: /\bexisting literature\b/gi, alts: ['past research', 'what\'s already been written', 'previous studies'] },
+    { match: /\bexisting literature documents\b/gi, alts: ['past research covers', 'previous work has documented', 'earlier studies cover'] },
+    { match: /\bexisting literature\b/gi, alts: ['past research', 'previous work', 'earlier studies'] },
     // --- Additional formality breakers ---
-    { match: /\bfurther restricts\b/gi, alts: ['makes it harder to', 'cuts down on', 'gets in the way of'] },
+    { match: /\bfurther restricts\b/gi, alts: ['further reduces', 'limits', 'holds back'] },
     { match: /\bincreases academic stress\b/gi, alts: ['piles on more stress', 'adds to the pressure', 'makes school harder'] },
     { match: /\bcreating a cycle\b/gi, alts: ['which creates a loop', 'and this becomes a recurring problem', 'reinforcing a difficult cycle'] },
     { match: /\bimpacts both\b/gi, alts: ['touches on both', 'affects both', 'weighs on both'] },
@@ -873,7 +875,7 @@
     { match: /\blimit opportunities\b/gi, alts: ['cut down on chances', 'reduce the chances', 'make it harder to find openings'] },
     { match: /\bdeeper engagement with\b/gi, alts: ['really getting into', 'deeper exchange with', 'more interaction with'] },
     { match: /\baffect academic performance\b/gi, alts: ['affect grades', 'hurt how well they do', 'shape their results'] },
-    { match: /\binteractive forms of learning\b/gi, alts: ['hands-on learning', 'more interactive ways of learning', 'learning that involves participation'] },
+    { match: /\binteractive forms of learning\b/gi, alts: ['hands-on learning', 'more interactive classroom formats', 'learning that demands student input'] },
     { match: /\bactive verbal input\b/gi, alts: ['actually speaking up', 'real verbal contribution', 'talking and sharing ideas'] },
   ];
 

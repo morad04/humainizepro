@@ -510,7 +510,7 @@
     'culmination': ['result', 'peak', 'end point', 'outcome'],
     'juxtaposition': ['contrast', 'comparison', 'clash', 'difference'],
     // --- Academic terms flagged by detectors ---
-    'increasingly': ['more and more', 'bit by bit', 'gradually'],
+    'increasingly': ['gradually', 'steadily', 'progressively'],
     'emphasizes': ['focuses on', 'pushes for', 'puts weight on'],
     'emphasize': ['focus on', 'push for', 'stress'],
     'demonstrates': ['shows', 'proves', 'makes clear'],
@@ -525,11 +525,11 @@
     'environment': ['setting', 'space', 'situation'],
     'institutional': ['school-level', 'university', 'organizational'],
     'proficiency': ['skill level', 'ability', 'competence'],
-    'spontaneous': ['on-the-spot', 'unplanned', 'natural'],
+    'spontaneous': ['unplanned', 'natural', 'unrehearsed'],
     'constraints': ['limits', 'restrictions', 'barriers'],
     'constrains': ['limits', 'restricts', 'holds back'],
-    'measurable': ['real', 'clear', 'noticeable'],
-    'adaptation': ['adjusting', 'getting used to things', 'settling in'],
+    'measurable': ['clear', 'noticeable', 'tangible'],
+    'adaptation': ['adjustment', 'transition', 'settling in'],
     'contributes': ['adds', 'helps', 'plays into'],
     'contribute': ['add', 'help', 'play into'],
     'initiatives': ['programs', 'efforts', 'plans'],
@@ -1313,8 +1313,9 @@
     if (strength >= 2) {
       const impersonalSwaps = [
         { match: /\bstudents frequently report\b/gi, alts: ['you often hear about students having', 'a lot of students say they have', 'students often talk about having'] },
-        { match: /\bstudents who lack confidence\b/gi, alts: ['if you\'re not confident', 'students who don\'t feel confident', 'when you\'re unsure of your English'] },
-        { match: /\bstudents may avoid\b/gi, alts: ['you might avoid', 'some students end up avoiding', 'it\'s common to avoid'] },
+        { match: /\bstudents who lack confidence in their English proficiency\b/gi, alts: ['students who don\'t feel confident about their English', 'students who aren\'t sure about their language skills', 'students lacking confidence in their English'] },
+        { match: /\bstudents who lack confidence\b/gi, alts: ['students who don\'t feel confident', 'students unsure of themselves', 'less confident students'] },
+        { match: /\bstudents may avoid\b/gi, alts: ['some students end up avoiding', 'it\'s common for students to avoid', 'students tend to avoid'] },
         { match: /\bthis pattern may influence\b/gi, alts: ['this can start to affect', 'over time this shapes', 'this tends to hurt'] },
         { match: /\bthis study investigates\b/gi, alts: ['this study looks at', 'what we\'re looking at here is', 'the goal here is to understand'] },
         { match: /\bit aims to identify\b/gi, alts: ['the idea is to find', 'we want to figure out', 'it tries to pin down'] },
@@ -1374,8 +1375,16 @@
           const wc = getSentenceWordCount(s);
           if (wc > 15 && rng() < 0.08) {
             const words = s.split(' ');
-            const insertPos = 3 + Math.floor(rng() * Math.min(words.length - 5, 6));
-            if (insertPos > 2 && insertPos < words.length - 2) {
+            // Find a safe insertion point: before a common verb form
+            const verbPattern = /^(is|are|was|were|has|have|had|does|do|did|can|could|will|would|may|might|shall|should|must|suggests?|shows?|indicates?|affects?|requires?|focuses|limits?|reduces?|creates?|remains?|makes?|needs?|helps?|supports?)$/i;
+            const safePositions = [];
+            for (let p = 3; p < words.length - 2; p++) {
+              if (verbPattern.test(words[p])) {
+                safePositions.push(p);
+              }
+            }
+            if (safePositions.length > 0) {
+              const insertPos = pickRandom(safePositions, rng);
               const disfluency = pickRandom(NATURAL_DISFLUENCIES, rng);
               words.splice(insertPos, 0, disfluency.trim());
               disCount++;
@@ -1816,14 +1825,17 @@
 
           // Detect fragment patterns:
           // 1. Starts with "And/Or" + short (< 8 words) — broken split
-          // 2. Starts with "Even though/Although" but no main clause (< 8 words)
-          // 3. Starts with "Strong/Along with" + short — adjective fragment
+          // 2. Starts with "Even though/Although" but no main clause (no comma = no resolution)
+          // 3. Starts with "Strong/Along with/Plus/Including" + short — adjective/list fragment
           // 4. Very short (< 4 words) and no verb
+          // 5. Sentence doesn't have a main verb (subordinate-only)
           const isFragment = (
             (/^(?:And|Or)\s/i.test(s) && wc < 8 && !/\b(?:is|are|was|were|has|have|had|do|does|did|can|could|will|would|may|might|shall|should|must)\b/i.test(s)) ||
-            (/^(?:Even though|Although|While)\s/i.test(s) && wc < 10 && !/,/.test(s)) ||
-            (/^(?:Strong|Along with|Plus)\s/i.test(s) && wc < 8) ||
-            (wc <= 3 && !/\b(?:is|are|was|were|has|have|do|does|did)\b/i.test(s))
+            (/^(?:Even though|Although|While)\s/i.test(s) && !/,/.test(s)) ||
+            (/^(?:Strong|Along with|Plus|Including)\s/i.test(s) && wc < 10) ||
+            (wc <= 3 && !/\b(?:is|are|was|were|has|have|do|does|did)\b/i.test(s)) ||
+            (/^(?:Feedback|Speaking|Listening|Reading|Writing)\b/.test(s) && wc < 6) ||
+            (/^(?:Largely)\s/.test(s) && wc < 8)
           );
 
           if (isFragment && repaired.length > 0) {

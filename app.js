@@ -1793,162 +1793,75 @@
     }
 
     // ═══════════════════════════════════════════════════════════
-    // PASS 14: CUSTOM HUMANIZER SKILL
-    // Built from analysis of 24 flagged sentences.
-    // Targets: Mechanical Precision, Predictable Syntax, Robotic
-    //          Formality, Impersonal Tone, Fragments, Register Mix
+    // PASS 14: TARGETED FIXES (from user's sentence analysis)
+    // Only safe regex replacements — no structural changes
     // ═══════════════════════════════════════════════════════════
 
-    // --- 14a: Sentence fragment repair ---
-    // Our splitting passes sometimes create broken sentences.
-    // Detect fragments and merge them with adjacent sentences.
-    {
-      const paragraphs = result.split(/\n\s*\n/);
-      const newParagraphs = paragraphs.map(para => {
-        const sentences = splitSentences(para);
-        if (sentences.length < 2) return para;
-        const repaired = [];
-
-        for (let i = 0; i < sentences.length; i++) {
-          const s = sentences[i].trim();
-          const wc = getSentenceWordCount(s);
-
-          // Fragment detection: very short incomplete sentences only
-          const isFragment = (
-            (wc <= 2) ||
-            (/^(?:And|Or|Plus|Also|Strong|Along with)\s/i.test(s) && wc < 5) ||
-            /^[A-Z][a-z]+\s(?:and|or)\s\w+\.$/.test(s) // "Listening and speaking."
-          );
-
-          if (isFragment && repaired.length > 0) {
-            // Merge fragment with previous sentence
-            const prev = repaired[repaired.length - 1].replace(/[.!?]\s*$/, '');
-            repaired[repaired.length - 1] = prev + ', ' + s.charAt(0).toLowerCase() + s.slice(1);
-            changeCount++;
-          } else if (isFragment && i + 1 < sentences.length) {
-            // Merge fragment with next sentence
-            const next = sentences[i + 1];
-            sentences[i + 1] = s.replace(/[.!?]\s*$/, '') + ' — ' + next.charAt(0).toLowerCase() + next.slice(1);
-            changeCount++;
-          } else {
-            repaired.push(s);
-          }
-        }
-
-        return repaired.join(' ');
-      });
-      result = newParagraphs.join('\n\n');
-    }
-
-    // --- 14b: Contrast pattern breaker ---
-    // "X, but it also Y" is a classic AI pattern. Break it.
-    {
-      // "X, but it also poses/creates/etc challenges"
-      result = result.replace(/,\s*but it also\s+/gi, () => {
-        changeCount++;
-        const alts = ['. That said, it also ', '. There are also ', '. On the flip side, it '];
-        return pickRandom(alts, rng);
-      });
-      // "X, but Y" at sentence start — make less neat
-      result = result.replace(/,\s*but\s+(this|it|they|these|that|there)\s/gi, (match, subj) => {
-        if (rng() < 0.5) {
-          changeCount++;
-          return '. ' + subj.charAt(0).toUpperCase() + subj.slice(1) + ' ';
-        }
-        return match;
-      });
-    }
-
-    // --- 14c/14d/14e DISABLED ---
-    // These injection passes (parenthetical asides, rhetorical questions,
-    // opener variety) add formulaic text that detectors ALSO flag.
-    // Testing showed they INCREASE the AI score from 10.5% to 14.6%.
-    // Keeping only the fixing passes below.
-
-    // --- 14f: Research template breaker ---
+    // --- Research template breaker ---
     // "This study examines..." / "This study therefore..." are instant AI tells
     {
       const templateFixes = [
-        { match: /\bThis study (?:therefore )?examines?\b/gi, alts: ['What we look at here is', 'The focus here is on', 'We set out to examine'] },
-        { match: /\bThis study (?:therefore )?(?:aims?|seeks?) to\b/gi, alts: ['The goal is to', 'We wanted to', 'The idea was to'] },
-        { match: /\bIt aims to (?:identify|spot|find)\b/gi, alts: ['We wanted to find', 'The aim was to identify', 'Part of this is figuring out'] },
-        { match: /\bThe results may (?:inform|feed into)\b/gi, alts: ['What we find could shape', 'These findings might help with', 'This could feed into'] },
-        { match: /\bExisting literature documents?\b/gi, alts: ['Past research covers', 'Previous work has looked at', 'A lot has been written about'] },
-        { match: /\bA clear understanding of this\b/gi, alts: ['Getting a handle on this', 'Understanding this better', 'Knowing more about this'] },
+        [/\bThis study (?:therefore |so )?examines?\b/gi, () => pickRandom(['What we look at here is', 'The focus here is', 'We set out to examine'], rng)],
+        [/\bThis study (?:therefore |so )?(?:aims?|seeks?) to\b/gi, () => pickRandom(['The goal is to', 'We wanted to', 'The idea was to'], rng)],
+        [/\bIt aims to (?:identify|spot|find)\b/gi, () => pickRandom(['We wanted to find', 'The aim was to identify', 'Part of this is figuring out'], rng)],
+        [/\bThe results may (?:inform|feed into)\b/gi, () => pickRandom(['What comes out of this could shape', 'These findings might help with', 'This could feed into'], rng)],
+        [/\bExisting literature documents?\b/gi, () => pickRandom(['Past research covers', 'Previous work has looked at', 'A lot has been written about'], rng)],
+        [/\bPrevious studies documents?\b/gi, () => pickRandom(['Past research covers', 'Earlier work has looked at', 'Quite a bit has been written about'], rng)],
+        [/\bA clear understanding of this\b/gi, () => pickRandom(['Getting a better sense of this', 'Understanding this more clearly', 'Knowing more about this'], rng)],
       ];
-
-      templateFixes.forEach(item => {
-        if (item.match.test(result)) {
-          result = result.replace(item.match, () => {
-            changeCount++;
-            return pickRandom(item.alts, rng);
-          });
-        }
+      templateFixes.forEach(([pattern, replacer]) => {
+        const before = result;
+        result = result.replace(pattern, replacer);
+        if (before !== result) changeCount++;
       });
     }
 
-    // --- 14g: Citation integration fixer ---
-    // AI inserts citations awkwardly: "a study by MDPI (2024) identifies listening."
-    // Fix: ensure citations are followed by complete thoughts
+    // --- Citation integration fixer ---
     {
-      // Fix "identifies listening." → "identifies listening as a key challenge."
-      result = result.replace(/\b(identifies?|suggests?|finds?|shows?|highlights?)\s+([\w]+)\.\s/gi, (match, verb, obj) => {
-        // If the object is a single word followed by period, it's likely truncated
-        if (obj.length < 15 && !/ing$/.test(obj)) return match; // skip normal endings
-        if (/^listening|speaking|reading|writing$/i.test(obj)) {
-          changeCount++;
-          return verb + ' ' + obj + ' as one of the main issues. ';
-        }
-        return match;
-      });
-
-      // Fix "suggests largely that" → "suggests that" (awkward adverb)
+      // Fix "suggests largely that" → "suggests that"
       result = result.replace(/\b(suggests?|indicates?|shows?)\s+largely\s+that\b/gi, (match, verb) => {
         changeCount++;
         return verb + ' that';
       });
-    }
-
-    // --- 14h: Register consistency ---
-    // Fix clashing casual + formal in same sentence
-    // "have a big intake of diverse linguistic and cultural backgrounds" → consistent register
-    {
-      const registerFixes = [
-        { match: /\bhave a? big intake of\b/gi, alts: ['bring in students from', 'attract students with', 'enroll a wide range of students with'] },
-        { match: /\bmore and more focuses on\b/gi, alts: ['has been shifting toward', 'has put more weight on', 'keeps moving toward'] },
-        { match: /\binvolves taking part\b/gi, alts: ['means getting involved', 'requires participation', 'is about participating'] },
-        { match: /\bhandle things\b/gi, alts: ['approach things', 'manage this', 'deal with it'] },
-        { match: /\bfeed into how\b/gi, alts: ['shape how', 'influence how', 'change how'] },
-        { match: /\bdeveloping of\b/gi, alts: ['developing', 'building', 'creating'] },
-        { match: /\bshape learning what happens\b/gi, alts: ['directly affect how learning goes', 'shape learning outcomes', 'influence what students get out of it'] },
-        { match: /\bclass involvement\b/gi, alts: ['class participation', 'how much they participate', 'how engaged they are'] },
-        { match: /\bback-and-forth\b/gi, alts: ['interaction', 'participation', 'engagement'] },
-        { match: /\bcut down on chances for\b/gi, alts: ['reduce opportunities for', 'limit chances to get', 'make it harder to get'] },
-      ];
-
-      registerFixes.forEach(item => {
-        if (item.match.test(result)) {
-          result = result.replace(item.match, () => {
-            changeCount++;
-            return pickRandom(item.alts, rng);
-          });
-        }
+      // Fix "This study so examines" → "This study examines"
+      result = result.replace(/\bstudy so examines\b/gi, () => {
+        changeCount++;
+        return 'study examines';
       });
     }
 
-    // --- 14i: Break "essay-style balance" in opening sentence ---
-    // "Study abroad has expanded a lot, and the UK remains..." = classic intro
+    // --- Register consistency ---
+    // Fix clashing casual + formal
+    {
+      const registerFixes = [
+        [/\bhave a? big intake of\b/gi, () => pickRandom(['bring in students from', 'attract students with'], rng)],
+        [/\bmore and more focuses on\b/gi, () => pickRandom(['has been shifting toward', 'increasingly focuses on'], rng)],
+        [/\binvolves taking part\b/gi, () => pickRandom(['means getting involved', 'requires participation'], rng)],
+        [/\bhandle things\b/gi, () => pickRandom(['approach this', 'work with this'], rng)],
+        [/\bdeveloping of\b/gi, () => 'developing'],
+        [/\bshape learning what happens\b/gi, () => pickRandom(['directly affect learning outcomes', 'shape what students get out of class'], rng)],
+        [/\bback-and-forth\b/gi, () => pickRandom(['interaction', 'engagement', 'participation'], rng)],
+        [/\bcut down on chances for\b/gi, () => pickRandom(['reduce opportunities for', 'limit chances for'], rng)],
+        [/\bfeed into how\b/gi, () => pickRandom(['shape how', 'influence how'], rng)],
+        [/\b, but it also\b/gi, () => pickRandom([', but it also', '. It also', '. At the same time, it'], rng)],
+      ];
+      registerFixes.forEach(([pattern, replacer]) => {
+        const before = result;
+        result = result.replace(pattern, replacer);
+        if (before !== result) changeCount++;
+      });
+    }
+
+    // --- Break opening sentence essay pattern ---
     {
       result = result.replace(/^([\w\s]+has expanded[\w\s]*?),?\s*and\s+(the UK|Britain|England)/im, (match, first, uk) => {
         changeCount++;
-        // Clean trailing comma/period/space from first part
         const cleanFirst = first.replace(/[,\s]+$/, '');
         return cleanFirst + '. ' + uk.charAt(0).toUpperCase() + uk.slice(1);
       });
     }
 
-    // --- Final artifact cleanup ---
-    // Fix any punctuation artifacts created by the passes
+    // --- Final cleanup ---
     result = result.replace(/,\s*\./g, '.');
     result = result.replace(/\.\s*\./g, '.');
     result = result.replace(/\.\s*,/g, '.');

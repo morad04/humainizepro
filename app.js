@@ -517,10 +517,10 @@
     'demonstrate': ['show', 'prove', 'make clear'],
     'indicates': ['shows', 'suggests', 'points to'],
     'indicate': ['show', 'suggest', 'point to'],
-    'participation': ['taking part', 'involvement', 'engagement'],
+    'participation': ['involvement', 'active role', 'input'],
     'terminology': ['terms', 'language', 'jargon'],
-    'engagement': ['involvement', 'taking part', 'interaction'],
-    'perspectives': ['views', 'angles', 'ways of looking at things'],
+    'engagement': ['involvement', 'participation', 'interaction'],
+    'perspectives': ['viewpoints', 'angles', 'outlooks'],
     'environments': ['settings', 'spaces', 'situations'],
     'environment': ['setting', 'space', 'situation'],
     'institutional': ['school-level', 'university', 'organizational'],
@@ -535,11 +535,11 @@
     'initiatives': ['programs', 'efforts', 'plans'],
     'investigate': ['look into', 'explore', 'study'],
     'investigates': ['looks into', 'explores', 'studies'],
-    'interaction': ['back-and-forth', 'exchange', 'conversation'],
-    'performance': ['results', 'how well someone does', 'output'],
+    'interaction': ['exchange', 'conversation', 'dialogue'],
+    'performance': ['results', 'progress', 'achievement'],
     'opportunities': ['chances', 'openings', 'options'],
-    'clarification': ['clearing things up', 'answers', 'explanations'],
-    'outcomes': ['results', 'what happens', 'effects'],
+    'clarification': ['answers', 'explanations', 'clarity'],
+    'outcomes': ['results', 'effects', 'consequences'],
     // --- dandcg/claude-skills banned words ---
     'unlock': ['open up', 'get access to', 'tap into'],
     'unlocks': ['opens up', 'gives access to', 'taps into'],
@@ -586,7 +586,7 @@
     'In practice, ', 'Realistically, ', 'To be fair, ',
     'For what it\'s worth, ', 'Interestingly, ',
     'As it turns out, ', 'Put simply, ',
-    'That said, ', 'Granted, ', 'Still, ', 'Then again, ',
+    'Granted, ', 'Still, ', 'Then again, ',
   ];
 
   // ═══════════════════════════════════════════════════════════
@@ -597,7 +597,7 @@
     { match: /^Additionally,?\s*/gim, alts: ['Also, ', 'Plus, ', 'And ', 'On top of that, ', ''] },
     { match: /^Furthermore,?\s*/gim, alts: ['Also, ', 'And ', 'Plus, ', 'Beyond that, ', ''] },
     { match: /^Moreover,?\s*/gim, alts: ['And ', 'Plus, ', 'On top of that, ', '', 'What\'s more, '] },
-    { match: /^However,?\s*/gim, alts: ['But ', 'Then again, ', 'That said, ', 'Still, ', 'Though, '] },
+    { match: /^However,?\s*/gim, alts: ['But ', 'Then again, ', 'Still, ', 'Though, ', 'At the same time, '] },
     { match: /^Consequently,?\s*/gim, alts: ['So ', 'Because of that, ', 'Which meant ', 'As a result, ', ''] },
     { match: /^Nevertheless,?\s*/gim, alts: ['Still, ', 'But ', 'Even so, ', 'Yet ', 'And yet, '] },
     { match: /^Nonetheless,?\s*/gim, alts: ['Still, ', 'But ', 'Even so, ', 'Yet ', ''] },
@@ -852,21 +852,21 @@
     // --- Additional formality breakers ---
     { match: /\bfurther restricts\b/gi, alts: ['makes it harder to', 'cuts down on', 'gets in the way of'] },
     { match: /\bincreases academic stress\b/gi, alts: ['piles on more stress', 'adds to the pressure', 'makes school harder'] },
-    { match: /\bcreating a cycle\b/gi, alts: ['and it turns into a cycle', 'which feeds back into itself', 'and this keeps going'] },
-    { match: /\bimpacts both\b/gi, alts: ['hits both', 'touches both', 'affects both'] },
+    { match: /\bcreating a cycle\b/gi, alts: ['which creates a loop', 'and this becomes a recurring problem', 'reinforcing a difficult cycle'] },
+    { match: /\bimpacts both\b/gi, alts: ['touches on both', 'affects both', 'weighs on both'] },
     { match: /\bfewer studies examining\b/gi, alts: ['not as many studies looking at', 'less research that digs into', 'few papers that actually explore'] },
     { match: /\bremains essential\b/gi, alts: ['is still really important', 'still matters a lot', 'is key'] },
     { match: /\bdesigning effective\b/gi, alts: ['coming up with good', 'building helpful', 'creating solid'] },
     { match: /\binstitutional support\b/gi, alts: ['university support', 'school-level help', 'support from the university'] },
-    { match: /\btherefore examines\b/gi, alts: ['so looks at', 'so examines', 'takes a closer look at'] },
-    { match: /\baffect the academic performance\b/gi, alts: ['affect grades', 'shape how students do', 'influence academic results'] },
-    { match: /\bclassroom participation\b/gi, alts: ['how much students participate', 'involvement in class', 'classroom involvement'] },
-    { match: /\bidentify common linguistic challenges\b/gi, alts: ['find the main language struggles', 'spot the common language problems', 'figure out what language issues come up'] },
-    { match: /\banalyze how these challenges\b/gi, alts: ['look at how these problems', 'see how these issues', 'understand how these struggles'] },
-    { match: /\bexplore strategies\b/gi, alts: ['find ways', 'look at what helps', 'see what works'] },
-    { match: /\bfacilitate adaptation\b/gi, alts: ['help with adjusting', 'make it easier to adjust', 'support settling in'] },
-    { match: /\binform university policies\b/gi, alts: ['help shape university policies', 'feed into how universities handle things', 'give universities ideas'] },
-    { match: /\bcontribute to the development\b/gi, alts: ['help build', 'feed into creating', 'play into developing'] },
+    { match: /\btherefore examines\b/gi, alts: ['looks at', 'takes a closer look at', 'explores'] },
+    { match: /\baffect the academic performance\b/gi, alts: ['affect how well students do academically', 'influence academic results', 'shape academic progress'] },
+    { match: /\bclassroom participation\b/gi, alts: ['how involved students are in class', 'student involvement in class', 'in-class participation'] },
+    { match: /\bidentify common linguistic challenges\b/gi, alts: ['identify the main language struggles students face', 'pinpoint common language difficulties', 'work out which language issues come up most'] },
+    { match: /\banalyze how these challenges\b/gi, alts: ['look at how these problems', 'understand how these difficulties', 'examine how these struggles'] },
+    { match: /\bexplore strategies\b/gi, alts: ['explore what works', 'look at approaches', 'consider methods'] },
+    { match: /\bfacilitate adaptation\b/gi, alts: ['help students adjust', 'ease the transition', 'support adaptation'] },
+    { match: /\binform university policies\b/gi, alts: ['help shape university policies', 'guide how universities approach this', 'give universities practical direction'] },
+    { match: /\bcontribute to the development\b/gi, alts: ['help in developing', 'assist in building', 'support the creation'] },
     { match: /\btargeted language\b/gi, alts: ['focused language', 'specific language', 'tailored language'] },
     { match: /\bacademic support initiatives\b/gi, alts: ['academic support programs', 'help programs', 'support efforts'] },
     { match: /\bclassroom engagement\b/gi, alts: ['involvement in class', 'class participation', 'how engaged students are'] },
@@ -1467,7 +1467,13 @@
             if (splitPoint > 5) {
               const firstPart = s.substring(0, splitPoint).replace(/,\s*$/, '');
               const secondPart = s.substring(splitPoint).replace(/^[,\s]+|^\s*which\s+|^\s*and\s+|^\s*but\s+/i, '');
-              if (getSentenceWordCount(firstPart) >= 5 && getSentenceWordCount(secondPart) >= 5) {
+
+              // SAFETY: Both parts must be long enough AND second part must look like a sentence
+              // (starts with a subject-like word, not a bare verb/adjective/fragment)
+              const looksLikeSentence = /^[A-Z]/.test(secondPart.charAt(0).toUpperCase() + secondPart.slice(1)) &&
+                /^(?:the|a|an|this|that|these|those|it|they|he|she|we|you|its|their|our|my|there|here|most|many|some|each|every|all|both|such|one|two|no|few|several|much|more|now|then|students|research|studies|universities|higher|data|findings|results|people|however|although|because|since|yet|still|even|so|language|communication|academic|low|high|over|despite|for|when|while|if|after|before|strong|international|many)\s/i.test(secondPart);
+
+              if (getSentenceWordCount(firstPart) >= 6 && getSentenceWordCount(secondPart) >= 6 && looksLikeSentence) {
                 const first = firstPart + '.';
                 // Occasionally start second part with 'And', 'But' for natural feel
                 let restCap = secondPart.charAt(0).toUpperCase() + secondPart.slice(1);
@@ -1790,6 +1796,54 @@
           });
         }
       });
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // FRAGMENT SAFETY NET
+    // Catch any sentence fragments created by splitting/vocab passes
+    // ═══════════════════════════════════════════════════════════
+    {
+      const paragraphs = result.split(/\n\s*\n/);
+      const fixedParagraphs = paragraphs.map(para => {
+        const sentences = splitSentences(para);
+        if (sentences.length < 2) return para;
+        const repaired = [];
+
+        for (let i = 0; i < sentences.length; i++) {
+          const s = sentences[i].trim();
+          if (!s) continue;
+          const wc = getSentenceWordCount(s);
+
+          // Detect fragment patterns:
+          // 1. Starts with "And/Or" + short (< 8 words) — broken split
+          // 2. Starts with "Even though/Although" but no main clause (< 8 words)
+          // 3. Starts with "Strong/Along with" + short — adjective fragment
+          // 4. Very short (< 4 words) and no verb
+          const isFragment = (
+            (/^(?:And|Or)\s/i.test(s) && wc < 8 && !/\b(?:is|are|was|were|has|have|had|do|does|did|can|could|will|would|may|might|shall|should|must)\b/i.test(s)) ||
+            (/^(?:Even though|Although|While)\s/i.test(s) && wc < 10 && !/,/.test(s)) ||
+            (/^(?:Strong|Along with|Plus)\s/i.test(s) && wc < 8) ||
+            (wc <= 3 && !/\b(?:is|are|was|were|has|have|do|does|did)\b/i.test(s))
+          );
+
+          if (isFragment && repaired.length > 0) {
+            // Merge with previous sentence using comma
+            const prev = repaired[repaired.length - 1].replace(/[.!?]\s*$/, '');
+            repaired[repaired.length - 1] = prev + ', ' + s.charAt(0).toLowerCase() + s.slice(1);
+            changeCount++;
+          } else if (isFragment && i + 1 < sentences.length) {
+            // Merge with next sentence using semicolon
+            const next = sentences[i + 1];
+            sentences[i + 1] = s.replace(/[.!?]\s*$/, '') + '; ' + next.charAt(0).toLowerCase() + next.slice(1);
+            changeCount++;
+          } else {
+            repaired.push(s);
+          }
+        }
+
+        return repaired.join(' ');
+      });
+      result = fixedParagraphs.join('\n\n');
     }
 
     // --- Final cleanup ---

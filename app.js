@@ -1812,71 +1812,91 @@
     }
 
     // ═══════════════════════════════════════════════════════════
-    // PASS 14: SENTENCE RESTRUCTURING (beats GPTZero perplexity)
-    // Changes actual sentence STRUCTURE, not just words
+    // PASS 14: PERPLEXITY INJECTION (targets GPTZero Model 4.2b)
+    // GPTZero flags: Impersonal Tone, Mechanical Precision,
+    //                Lacks Creative Grammar, Robotic Formality
     // ═══════════════════════════════════════════════════════════
 
-    // --- 14a: Active↔Passive voice transformation ---
-    // "A study by X identifies Y" → "Y is identified by a study from X"
-    // "Research suggests X" → "X is suggested by research"
+    // --- 14a: Parenthetical aside injection ---
+    // Humans naturally interrupt themselves with dashes and parentheses
+    // This creates token-level unpredictability that raises perplexity
     {
-      const passivePatterns = [
-        // "A study by X (YEAR) identifies/suggests/shows Y" → "Y has been identified/suggested/shown by a study from X (YEAR)"
+      const asides = [
+        ' — and this is worth emphasizing — ',
+        ' — something that often goes overlooked — ',
+        ' — a point that deserves attention — ',
+        ' — which is telling — ',
+        ' — interestingly enough — ',
+        ' — and this matters — ',
+        ' — perhaps surprisingly — ',
+        ' — and not just marginally — ',
+        ' (and this is not trivial) ',
+        ' (a recurring theme in the literature) ',
+      ];
+      const paragraphs = result.split(/\n\s*\n/);
+      let asideCount = 0;
+      const maxAsides = strength >= 3 ? 4 : 2;
+
+      const newParagraphs = paragraphs.map(para => {
+        const sentences = splitSentences(para);
+        const newSentences = sentences.map(s => {
+          if (asideCount >= maxAsides) return s;
+          const wc = getSentenceWordCount(s);
+          // Only inject into medium-long sentences (15-30 words)
+          if (wc < 15 || wc > 30) return s;
+          if (rng() > 0.25) return s;
+
+          const words = s.split(' ');
+          // Find a good insertion point: after a verb or noun (positions 4-8)
+          const insertPos = 4 + Math.floor(rng() * Math.min(words.length - 8, 5));
+          if (insertPos < 3 || insertPos >= words.length - 3) return s;
+
+          const aside = pickRandom(asides, rng);
+          const before = words.slice(0, insertPos).join(' ');
+          const after = words.slice(insertPos).join(' ');
+          asideCount++;
+          changeCount++;
+          return before + aside + after;
+        });
+        return newSentences.join(' ');
+      });
+      result = newParagraphs.join('\n\n');
+    }
+
+    // --- 14b: Sentence opener variety ---
+    // AI text always starts with Subject-Verb. Humans use varied openers.
+    {
+      const openerTransforms = [
+        // "X is Y" → "What's notable about X is that it's Y"
         {
-          match: /^(A study|Research|A report|Work|Analysis)\s+(by|from|published by)\s+([^(]+)\((\d{4})\)\s+(identifies|suggests|shows|indicates|reveals|finds|demonstrates|highlights)\s+(.+?)([.!?])\s*$/i,
-          transform: (m, subj, prep, org, year, verb, rest, punct) => {
-            const pastParticiples = {
-              'identifies': 'identified', 'suggests': 'suggested', 'shows': 'shown',
-              'indicates': 'indicated', 'reveals': 'revealed', 'finds': 'found',
-              'demonstrates': 'demonstrated', 'highlights': 'highlighted'
-            };
-            const pp = pastParticiples[verb.toLowerCase()] || verb + 'd';
-            const restCap = rest.charAt(0).toUpperCase() + rest.slice(1).replace(/\s+that\s+/i, ' — according to this research — ');
-            return restCap.replace(/[,\s]+$/, '') + ', as ' + pp + ' by ' + org.trim() + ' (' + year + ')' + punct;
-          }
+          match: /^(This|That|The|A|An)\s+(.{5,20})\s+(is|are|was|were)\s+(.+?)([.!?])\s*$/i,
+          alts: [
+            (m, det, subj, verb, pred, punct) => 'What stands out about ' + det.toLowerCase() + ' ' + subj + ' ' + verb + ' that ' + pred + punct,
+            (m, det, subj, verb, pred, punct) => 'Looking at ' + det.toLowerCase() + ' ' + subj + ', it ' + verb + ' ' + pred + punct,
+          ]
         },
-        // "Research in X suggests that Y" → "According to research in X, Y"
+        // "Students often X" → "It is common for students to X" / "Among students, X"
         {
-          match: /^(Research|Studies|Work)\s+(in|from|at)\s+(.+?)\s+(suggests?|shows?|indicates?|finds?)\s+that\s+(.+?)([.!?])\s*$/i,
-          transform: (m, subj, prep, source, verb, claim, punct) => {
-            return 'According to ' + subj.toLowerCase() + ' ' + prep + ' ' + source + ', ' + claim.charAt(0).toLowerCase() + claim.slice(1) + punct;
-          }
+          match: /^Students\s+(often|frequently|commonly|typically)\s+(.+?)([.!?])\s*$/i,
+          alts: [
+            (m, freq, rest, punct) => 'Among students, it is common to ' + rest + punct,
+            (m, freq, rest, punct) => 'Many students find themselves ' + rest.replace(/^(complaining|reporting|saying)/, '$1') + punct,
+          ]
         },
       ];
 
-      passivePatterns.forEach(({ match, transform }) => {
-        const sentences = splitSentences(result);
-        const newSentences = sentences.map(s => {
+      const sentences = splitSentences(result);
+      let openerCount = 0;
+      const maxOpeners = strength >= 3 ? 3 : 1;
+      const newSentences = sentences.map(s => {
+        if (openerCount >= maxOpeners) return s;
+        for (const { match, alts } of openerTransforms) {
           const m = s.match(match);
-          if (m && rng() < 0.6) {
+          if (m && rng() < 0.35) {
+            const transform = pickRandom(alts, rng);
+            openerCount++;
             changeCount++;
             return transform(...m);
-          }
-          return s;
-        });
-        result = newSentences.join(' ');
-      });
-    }
-
-    // --- 14b: Three-item list breaking ---
-    // "X, Y, and Z" → "X and Y. Z is also a factor." or "X and Y — along with Z"
-    {
-      const sentences = splitSentences(result);
-      let listBreaks = 0;
-      const maxListBreaks = strength >= 3 ? 3 : 1;
-      const newSentences = sentences.map(s => {
-        if (listBreaks >= maxListBreaks) return s;
-        // Match "verb X, Y, and Z" pattern
-        const listMatch = s.match(/^(.+?)\b(including|such as|like|namely|of|about)\s+([^,]+),\s+([^,]+),?\s+and\s+([^.!?]+)([.!?])\s*$/i);
-        if (listMatch && rng() < 0.4) {
-          const [, prefix, connector, item1, item2, item3, punct] = listMatch;
-          listBreaks++;
-          changeCount++;
-          // Shorten to two items with a separate mention
-          if (rng() < 0.5) {
-            return prefix + connector + ' ' + item1 + ' and ' + item2 + punct + ' ' + item3.charAt(0).toUpperCase() + item3.slice(1) + ' is part of this too' + punct;
-          } else {
-            return prefix + connector + ' ' + item1 + ' and ' + item2 + ' — not to mention ' + item3 + punct;
           }
         }
         return s;
@@ -1884,67 +1904,81 @@
       result = newSentences.join(' ');
     }
 
-    // --- 14c: Sentence combining (reduce short declarative chains) ---
-    // Merge consecutive short sentences into complex ones
+    // --- 14c: Academic first-person injection ---
+    // "This study examines" → "In this study, we examine"
+    // "It aims to identify" → "Our aim is to identify"
     {
-      const paragraphs = result.split(/\n\s*\n/);
-      const newParagraphs = paragraphs.map(para => {
-        const sentences = splitSentences(para);
-        if (sentences.length < 3) return para;
-        const combined = [];
-        let combineCount = 0;
-        const maxCombines = strength >= 3 ? 3 : 2;
-
-        for (let i = 0; i < sentences.length; i++) {
-          const s = sentences[i];
-          const wc = getSentenceWordCount(s);
-          const nextS = sentences[i + 1];
-          const nextWc = nextS ? getSentenceWordCount(nextS) : 0;
-
-          // Combine if both are short (< 12 words) and we haven't combined too many
-          if (wc < 12 && nextWc > 0 && nextWc < 12 && combineCount < maxCombines && rng() < 0.4) {
-            const connectors = [', and ', ', which means ', '. In other words, ', ' — essentially, '];
-            const connector = pickRandom(connectors, rng);
-            const first = s.replace(/[.!?]\s*$/, '');
-            const second = nextS.charAt(0).toLowerCase() + nextS.slice(1);
-            combined.push(first + connector + second);
-            i++; // skip next sentence
-            combineCount++;
-            changeCount++;
-          } else {
-            combined.push(s);
-          }
-        }
-        return combined.join(' ');
-      });
-      result = newParagraphs.join('\n\n');
-    }
-
-    // --- 14d: Impersonal→Personal academic voice ---
-    // Transform impersonal constructions to more direct academic voice
-    {
-      const impersonalFixes = [
-        [/\bIt is worth noting that\b/gi, () => pickRandom(['Notably,', 'One key point here:', 'An important detail:'], rng)],
-        [/\bIt should be noted that\b/gi, () => pickRandom(['Notably,', 'Worth highlighting:', 'Keep in mind,'], rng)],
-        [/\bIt can be argued that\b/gi, () => pickRandom(['One could argue', 'The argument here is that', 'A case can be made that'], rng)],
-        [/\bThere is a lack of\b/gi, () => pickRandom(['Not enough exists in terms of', 'The field still lacks', 'Researchers have not yet covered enough of'], rng)],
-        [/\bThere are fewer studies\b/gi, () => pickRandom(['Not many studies exist', 'The research here is limited — fewer studies', 'Researchers have not focused enough on'], rng)],
+      const firstPersonSwaps = [
+        [/\bThis study (?:therefore )?examines\b/gi, () => pickRandom(['In this study, we examine', 'What we examine here is', 'The focus of this work is on examining'], rng)],
+        [/\bThis study (?:therefore )?takes a closer look at\b/gi, () => pickRandom(['Here, we take a closer look at', 'In this paper, we look more closely at', 'Our focus is on'], rng)],
+        [/\bIt aims to\b/gi, () => pickRandom(['Our aim is to', 'We aim to', 'The goal here is to'], rng)],
+        [/\bThe results may\b/gi, () => pickRandom(['We hope the results will', 'Our findings could', 'These results, we believe, may'], rng)],
+        [/\bA clear understanding of this\b/gi, () => pickRandom(['Understanding this more clearly', 'A better grasp of this', 'Getting a clearer picture of this'], rng)],
       ];
-      impersonalFixes.forEach(([pattern, replacer]) => {
+      firstPersonSwaps.forEach(([pattern, replacer]) => {
         const before = result;
         result = result.replace(pattern, replacer);
         if (before !== result) changeCount++;
       });
     }
 
-    // --- 14e: Hedge and filler reduction ---
-    // AI overuses hedges: "may", "might", "can", "often", "typically"
-    // Remove some to create more assertive, human-like statements
+    // --- 14d: Emphatic short sentence injection ---
+    // Add very short sentences after key claims (3-5 words)
+    // This creates burstiness that GPTZero measures
+    {
+      const emphaticFollowUps = [
+        'That matters.',
+        'This is significant.',
+        'The evidence is clear.',
+        'This is not trivial.',
+        'The gap is real.',
+        'And it shows.',
+        'The impact is noticeable.',
+      ];
+      const sentences = splitSentences(result);
+      let emphaticCount = 0;
+      const maxEmphatics = strength >= 3 ? 3 : 1;
+      const newSentences = [];
+
+      for (let i = 0; i < sentences.length; i++) {
+        newSentences.push(sentences[i]);
+        if (emphaticCount >= maxEmphatics) continue;
+
+        // Insert after sentences that make strong claims
+        const s = sentences[i];
+        if (/\b(significant|important|essential|critical|key|major|crucial|considerable)\b/i.test(s) && rng() < 0.3) {
+          newSentences.push(pickRandom(emphaticFollowUps, rng));
+          emphaticCount++;
+          changeCount++;
+        }
+      }
+      result = newSentences.join(' ');
+    }
+
+    // --- 14e: Register-breaking academic phrases ---
+    // Mix formal with semi-formal to break uniformity
+    {
+      const registerBreaks = [
+        [/\bThere aren't as many studies looking at\b/gi, () => pickRandom(["Not enough research has focused on", "Surprisingly little work has gone into examining", "The literature, frankly, has not done enough on"], rng)],
+        [/\bstill matters a lot\b/gi, () => pickRandom(["remains critically important", "cannot be overstated in its importance", "is, in practical terms, essential"], rng)],
+        [/\bmay guide how universities approach this\b/gi, () => pickRandom(["could help reshape how universities handle this", "should, ideally, influence university policy", "have the potential to shift institutional thinking"], rng)],
+        [/\bsupport the creation of focused\b/gi, () => pickRandom(["contribute to building more targeted", "help develop more carefully designed", "feed into the design of more effective"], rng)],
+        [/\blanguage and help programs\b/gi, () => pickRandom(["language support and academic assistance programs", "programs for language development and academic guidance", "initiatives that target both language and academic needs"], rng)],
+      ];
+      registerBreaks.forEach(([pattern, replacer]) => {
+        const before = result;
+        result = result.replace(pattern, replacer);
+        if (before !== result) changeCount++;
+      });
+    }
+
+    // --- 14f: Hedge and filler reduction ---
     {
       let hedgeCount = 0;
       const maxHedgeRemoval = 2;
       const hedges = [
         [/\bThis pattern may affect\b/gi, () => { hedgeCount++; return 'This pattern affects'; }],
+        [/\bThis pattern affects\b/gi, () => { hedgeCount++; return 'Over time, this clearly affects'; }],
         [/\bmay inform\b/gi, () => { hedgeCount++; return 'could shape'; }],
         [/\btypically assess\b/gi, () => { hedgeCount++; return 'assess'; }],
       ];

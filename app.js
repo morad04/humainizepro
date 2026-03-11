@@ -1792,66 +1792,6 @@
       });
     }
 
-    // ═══════════════════════════════════════════════════════════
-    // PASS 14: TARGETED FIXES (from user's sentence analysis)
-    // Only safe regex replacements — no structural changes
-    // ═══════════════════════════════════════════════════════════
-
-    // --- Research template breaker ---
-    // "This study examines..." / "This study therefore..." are instant AI tells
-    {
-      const templateFixes = [
-        [/\bThis study (?:therefore |so )?examines?\b/gi, () => pickRandom(['What we look at here is', 'The focus here is', 'We set out to examine'], rng)],
-        [/\bThis study (?:therefore |so )?(?:aims?|seeks?) to\b/gi, () => pickRandom(['The goal is to', 'We wanted to', 'The idea was to'], rng)],
-        [/\bIt aims to (?:identify|spot|find)\b/gi, () => pickRandom(['We wanted to find', 'The aim was to identify', 'Part of this is figuring out'], rng)],
-        [/\bThe results may (?:inform|feed into)\b/gi, () => pickRandom(['What comes out of this could shape', 'These findings might help with', 'This could feed into'], rng)],
-        [/\bExisting literature documents?\b/gi, () => pickRandom(['Past research covers', 'Previous work has looked at', 'A lot has been written about'], rng)],
-        [/\bPrevious studies documents?\b/gi, () => pickRandom(['Past research covers', 'Earlier work has looked at', 'Quite a bit has been written about'], rng)],
-        [/\bA clear understanding of this\b/gi, () => pickRandom(['Getting a better sense of this', 'Understanding this more clearly', 'Knowing more about this'], rng)],
-      ];
-      templateFixes.forEach(([pattern, replacer]) => {
-        const before = result;
-        result = result.replace(pattern, replacer);
-        if (before !== result) changeCount++;
-      });
-    }
-
-    // --- Citation integration fixer ---
-    {
-      // Fix "suggests largely that" → "suggests that"
-      result = result.replace(/\b(suggests?|indicates?|shows?)\s+largely\s+that\b/gi, (match, verb) => {
-        changeCount++;
-        return verb + ' that';
-      });
-      // Fix "This study so examines" → "This study examines"
-      result = result.replace(/\bstudy so examines\b/gi, () => {
-        changeCount++;
-        return 'study examines';
-      });
-    }
-
-    // --- Register consistency ---
-    // Fix clashing casual + formal
-    {
-      const registerFixes = [
-        [/\bhave a? big intake of\b/gi, () => pickRandom(['bring in students from', 'attract students with'], rng)],
-        [/\bmore and more focuses on\b/gi, () => pickRandom(['has been shifting toward', 'increasingly focuses on'], rng)],
-        [/\binvolves taking part\b/gi, () => pickRandom(['means getting involved', 'requires participation'], rng)],
-        [/\bhandle things\b/gi, () => pickRandom(['approach this', 'work with this'], rng)],
-        [/\bdeveloping of\b/gi, () => 'developing'],
-        [/\bshape learning what happens\b/gi, () => pickRandom(['directly affect learning outcomes', 'shape what students get out of class'], rng)],
-        [/\bback-and-forth\b/gi, () => pickRandom(['interaction', 'engagement', 'participation'], rng)],
-        [/\bcut down on chances for\b/gi, () => pickRandom(['reduce opportunities for', 'limit chances for'], rng)],
-        [/\bfeed into how\b/gi, () => pickRandom(['shape how', 'influence how'], rng)],
-        [/\b, but it also\b/gi, () => pickRandom([', but it also', '. It also', '. At the same time, it'], rng)],
-      ];
-      registerFixes.forEach(([pattern, replacer]) => {
-        const before = result;
-        result = result.replace(pattern, replacer);
-        if (before !== result) changeCount++;
-      });
-    }
-
     // --- Final cleanup ---
     result = result.replace(/,\s*\./g, '.');
     result = result.replace(/\.\s*\./g, '.');

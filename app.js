@@ -1813,11 +1813,10 @@
           const s = sentences[i].trim();
           const wc = getSentenceWordCount(s);
 
-          // Fragment detection: too short, starts with "And"/"Or", or lacks a verb-like pattern
+          // Fragment detection: very short incomplete sentences only
           const isFragment = (
-            (wc <= 4 && !/^[A-Z]/.test(s)) ||
-            (wc <= 3) ||
-            /^(?:And|Or|Plus|Also|Strong|Along with)\s/i.test(s) && wc < 6 ||
+            (wc <= 2) ||
+            (/^(?:And|Or|Plus|Also|Strong|Along with)\s/i.test(s) && wc < 5) ||
             /^[A-Z][a-z]+\s(?:and|or)\s\w+\.$/.test(s) // "Listening and speaking."
           );
 
@@ -2035,11 +2034,21 @@
     // --- 14i: Break "essay-style balance" in opening sentence ---
     // "Study abroad has expanded a lot, and the UK remains..." = classic intro
     {
-      result = result.replace(/^([\w\s]+has expanded[\w\s,]*),?\s*and\s+(the UK|Britain|England)/im, (match, first, uk) => {
+      result = result.replace(/^([\w\s]+has expanded[\w\s]*?),?\s*and\s+(the UK|Britain|England)/im, (match, first, uk) => {
         changeCount++;
-        return first + '. ' + uk;
+        // Clean trailing comma/period/space from first part
+        const cleanFirst = first.replace(/[,\s]+$/, '');
+        return cleanFirst + '. ' + uk.charAt(0).toUpperCase() + uk.slice(1);
       });
     }
+
+    // --- Final artifact cleanup ---
+    // Fix any punctuation artifacts created by the passes
+    result = result.replace(/,\s*\./g, '.');
+    result = result.replace(/\.\s*\./g, '.');
+    result = result.replace(/\.\s*,/g, '.');
+    result = result.replace(/  +/g, ' ');
+    result = result.replace(/\. ([a-z])/g, (m, c) => '. ' + c.toUpperCase());
 
     return { text: result, changeCount };
   }

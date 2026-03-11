@@ -1859,106 +1859,11 @@
       });
     }
 
-    // --- 14c: Parenthetical aside injection ---
-    // Humans add asides like "(which is saying something)" or "(to be fair)"
-    // This makes text feel like it has a voice and opinion
-    if (strength >= 2) {
-      const asides = [
-        { trigger: /\b(a lot|many|most)\b/i, inserts: ['(and there are quite a few)', '(no small number)', '(more than you might think)'] },
-        { trigger: /\bdifficult|challenging|hard\b/i, inserts: ['(to put it mildly)', '(and it really is)', '(which can be frustrating)'] },
-        { trigger: /\bimprove|better|enhance\b/i, inserts: ['(always a good thing)', '(which would help a lot)', '(something worth pushing for)'] },
-      ];
-      let asideCount = 0;
-      const paragraphs = result.split(/\n\s*\n/);
-      const newParagraphs = paragraphs.map(para => {
-        if (asideCount >= 2) return para; // max 2 per text
-        const sentences = splitSentences(para);
-        return sentences.map(s => {
-          if (asideCount >= 2) return s;
-          for (const aside of asides) {
-            if (aside.trigger.test(s) && rng() < 0.15) {
-              asideCount++;
-              changeCount++;
-              const insert = pickRandom(aside.inserts, rng);
-              // Insert aside after the trigger word's sentence end
-              return s.replace(/([.!?])\s*$/, ' ' + insert + '$1');
-            }
-          }
-          return s;
-        }).join(' ');
-      });
-      result = newParagraphs.join('\n\n');
-    }
-
-    // --- 14d: Sentence type variety ---
-    // ALL sentences are declarative (Subject-Verb-Object). This is the #1 AI tell.
-    // Inject occasional rhetorical questions to break the pattern.
-    if (strength >= 2) {
-      const paragraphs = result.split(/\n\s*\n/);
-      let questionCount = 0;
-      const newParagraphs = paragraphs.map((para, pIdx) => {
-        if (questionCount >= 2) return para; // max 2 questions per text
-        const sentences = splitSentences(para);
-        if (sentences.length < 3) return para;
-
-        return sentences.map((s, sIdx) => {
-          if (questionCount >= 2) return s;
-          // Add question before sentences that explain challenges or make claims
-          if (sIdx > 0 && sIdx < sentences.length - 1 && rng() < 0.1) {
-            const wc = getSentenceWordCount(s);
-            if (wc > 10 && wc < 25) {
-              const questions = [
-                'So what does this actually mean?',
-                'Why does this matter?',
-                'What happens in practice?',
-                'How does this play out?',
-                'But what does that look like in reality?',
-              ];
-              questionCount++;
-              changeCount++;
-              return pickRandom(questions, rng) + ' ' + s;
-            }
-          }
-          return s;
-        }).join(' ');
-      });
-      result = newParagraphs.join('\n\n');
-    }
-
-    // --- 14e: Sentence opener variety ---
-    // AI always starts with Subject-Verb. Humans start with:
-    // adverbs, prepositional phrases, gerunds, conditionals
-    if (strength >= 2) {
-      const paragraphs = result.split(/\n\s*\n/);
-      let changed = 0;
-      const newParagraphs = paragraphs.map(para => {
-        const sentences = splitSentences(para);
-        return sentences.map(s => {
-          if (changed >= 4) return s;
-          const wc = getSentenceWordCount(s);
-          if (wc < 10 || wc > 30) return s;
-
-          // Detect "Subject verb..." pattern (starts with noun-like word + verb)
-          const subjectVerbMatch = s.match(/^(The|This|These|Those|Most|Many|Some|A|An|Each|Every|It|They|Students|Research|Studies|Universities|Higher)\s+/);
-          if (subjectVerbMatch && rng() < 0.2) {
-            const openers = [
-              'Looking at it broadly, ',
-              'From what we can tell, ',
-              'In practical terms, ',
-              'When you think about it, ',
-              'Across the board, ',
-              'Generally speaking, ',
-              'As it turns out, ',
-            ];
-            changed++;
-            changeCount++;
-            return pickRandom(openers, rng) + s.charAt(0).toLowerCase() + s.slice(1);
-          }
-          return s;
-        }).join(' ');
-      });
-      result = newParagraphs.join('\n\n');
-    }
+    // --- 14c/14d/14e DISABLED ---
+    // These injection passes (parenthetical asides, rhetorical questions,
+    // opener variety) add formulaic text that detectors ALSO flag.
+    // Testing showed they INCREASE the AI score from 10.5% to 14.6%.
+    // Keeping only the fixing passes below.
 
     // --- 14f: Research template breaker ---
     // "This study examines..." / "This study therefore..." are instant AI tells

@@ -1415,6 +1415,8 @@
           if (reorderCount >= maxReorders) return s;
           const wc = getSentenceWordCount(s);
           if (wc < 12 || wc > 35) return s;
+          // Skip sentences with semicolons or "However" — reordering garbles them
+          if (/;/.test(s) || /\bHowever\b/i.test(s)) return s;
 
           // Pattern: "X, Y" -> "Y. X" (move clause after comma to front)
           const commaMatch = s.match(/^(.{15,}?),\s+(.{10,}?)([.!?])\s*$/);
@@ -1810,6 +1812,152 @@
     }
 
     // ═══════════════════════════════════════════════════════════
+    // PASS 14: SENTENCE RESTRUCTURING (beats GPTZero perplexity)
+    // Changes actual sentence STRUCTURE, not just words
+    // ═══════════════════════════════════════════════════════════
+
+    // --- 14a: Active↔Passive voice transformation ---
+    // "A study by X identifies Y" → "Y is identified by a study from X"
+    // "Research suggests X" → "X is suggested by research"
+    {
+      const passivePatterns = [
+        // "A study by X (YEAR) identifies/suggests/shows Y" → "Y has been identified/suggested/shown by a study from X (YEAR)"
+        {
+          match: /^(A study|Research|A report|Work|Analysis)\s+(by|from|published by)\s+([^(]+)\((\d{4})\)\s+(identifies|suggests|shows|indicates|reveals|finds|demonstrates|highlights)\s+(.+?)([.!?])\s*$/i,
+          transform: (m, subj, prep, org, year, verb, rest, punct) => {
+            const pastParticiples = {
+              'identifies': 'identified', 'suggests': 'suggested', 'shows': 'shown',
+              'indicates': 'indicated', 'reveals': 'revealed', 'finds': 'found',
+              'demonstrates': 'demonstrated', 'highlights': 'highlighted'
+            };
+            const pp = pastParticiples[verb.toLowerCase()] || verb + 'd';
+            const restCap = rest.charAt(0).toUpperCase() + rest.slice(1).replace(/\s+that\s+/i, ' — according to this research — ');
+            return restCap.replace(/[,\s]+$/, '') + ', as ' + pp + ' by ' + org.trim() + ' (' + year + ')' + punct;
+          }
+        },
+        // "Research in X suggests that Y" → "According to research in X, Y"
+        {
+          match: /^(Research|Studies|Work)\s+(in|from|at)\s+(.+?)\s+(suggests?|shows?|indicates?|finds?)\s+that\s+(.+?)([.!?])\s*$/i,
+          transform: (m, subj, prep, source, verb, claim, punct) => {
+            return 'According to ' + subj.toLowerCase() + ' ' + prep + ' ' + source + ', ' + claim.charAt(0).toLowerCase() + claim.slice(1) + punct;
+          }
+        },
+      ];
+
+      passivePatterns.forEach(({ match, transform }) => {
+        const sentences = splitSentences(result);
+        const newSentences = sentences.map(s => {
+          const m = s.match(match);
+          if (m && rng() < 0.6) {
+            changeCount++;
+            return transform(...m);
+          }
+          return s;
+        });
+        result = newSentences.join(' ');
+      });
+    }
+
+    // --- 14b: Three-item list breaking ---
+    // "X, Y, and Z" → "X and Y. Z is also a factor." or "X and Y — along with Z"
+    {
+      const sentences = splitSentences(result);
+      let listBreaks = 0;
+      const maxListBreaks = strength >= 3 ? 3 : 1;
+      const newSentences = sentences.map(s => {
+        if (listBreaks >= maxListBreaks) return s;
+        // Match "verb X, Y, and Z" pattern
+        const listMatch = s.match(/^(.+?)\b(including|such as|like|namely|of|about)\s+([^,]+),\s+([^,]+),?\s+and\s+([^.!?]+)([.!?])\s*$/i);
+        if (listMatch && rng() < 0.4) {
+          const [, prefix, connector, item1, item2, item3, punct] = listMatch;
+          listBreaks++;
+          changeCount++;
+          // Shorten to two items with a separate mention
+          if (rng() < 0.5) {
+            return prefix + connector + ' ' + item1 + ' and ' + item2 + punct + ' ' + item3.charAt(0).toUpperCase() + item3.slice(1) + ' is part of this too' + punct;
+          } else {
+            return prefix + connector + ' ' + item1 + ' and ' + item2 + ' — not to mention ' + item3 + punct;
+          }
+        }
+        return s;
+      });
+      result = newSentences.join(' ');
+    }
+
+    // --- 14c: Sentence combining (reduce short declarative chains) ---
+    // Merge consecutive short sentences into complex ones
+    {
+      const paragraphs = result.split(/\n\s*\n/);
+      const newParagraphs = paragraphs.map(para => {
+        const sentences = splitSentences(para);
+        if (sentences.length < 3) return para;
+        const combined = [];
+        let combineCount = 0;
+        const maxCombines = strength >= 3 ? 3 : 2;
+
+        for (let i = 0; i < sentences.length; i++) {
+          const s = sentences[i];
+          const wc = getSentenceWordCount(s);
+          const nextS = sentences[i + 1];
+          const nextWc = nextS ? getSentenceWordCount(nextS) : 0;
+
+          // Combine if both are short (< 12 words) and we haven't combined too many
+          if (wc < 12 && nextWc > 0 && nextWc < 12 && combineCount < maxCombines && rng() < 0.4) {
+            const connectors = [', and ', ', which means ', '. In other words, ', ' — essentially, '];
+            const connector = pickRandom(connectors, rng);
+            const first = s.replace(/[.!?]\s*$/, '');
+            const second = nextS.charAt(0).toLowerCase() + nextS.slice(1);
+            combined.push(first + connector + second);
+            i++; // skip next sentence
+            combineCount++;
+            changeCount++;
+          } else {
+            combined.push(s);
+          }
+        }
+        return combined.join(' ');
+      });
+      result = newParagraphs.join('\n\n');
+    }
+
+    // --- 14d: Impersonal→Personal academic voice ---
+    // Transform impersonal constructions to more direct academic voice
+    {
+      const impersonalFixes = [
+        [/\bIt is worth noting that\b/gi, () => pickRandom(['Notably,', 'One key point here:', 'An important detail:'], rng)],
+        [/\bIt should be noted that\b/gi, () => pickRandom(['Notably,', 'Worth highlighting:', 'Keep in mind,'], rng)],
+        [/\bIt can be argued that\b/gi, () => pickRandom(['One could argue', 'The argument here is that', 'A case can be made that'], rng)],
+        [/\bThere is a lack of\b/gi, () => pickRandom(['Not enough exists in terms of', 'The field still lacks', 'Researchers have not yet covered enough of'], rng)],
+        [/\bThere are fewer studies\b/gi, () => pickRandom(['Not many studies exist', 'The research here is limited — fewer studies', 'Researchers have not focused enough on'], rng)],
+      ];
+      impersonalFixes.forEach(([pattern, replacer]) => {
+        const before = result;
+        result = result.replace(pattern, replacer);
+        if (before !== result) changeCount++;
+      });
+    }
+
+    // --- 14e: Hedge and filler reduction ---
+    // AI overuses hedges: "may", "might", "can", "often", "typically"
+    // Remove some to create more assertive, human-like statements
+    {
+      let hedgeCount = 0;
+      const maxHedgeRemoval = 2;
+      const hedges = [
+        [/\bThis pattern may affect\b/gi, () => { hedgeCount++; return 'This pattern affects'; }],
+        [/\bmay inform\b/gi, () => { hedgeCount++; return 'could shape'; }],
+        [/\btypically assess\b/gi, () => { hedgeCount++; return 'assess'; }],
+      ];
+      hedges.forEach(([pattern, replacer]) => {
+        if (hedgeCount < maxHedgeRemoval) {
+          const before = result;
+          result = result.replace(pattern, replacer);
+          if (before !== result) changeCount++;
+        }
+      });
+    }
+
+    // ═══════════════════════════════════════════════════════════
     // FRAGMENT SAFETY NET
     // Catch any sentence fragments created by splitting/vocab passes
     // ═══════════════════════════════════════════════════════════
@@ -1864,8 +2012,16 @@
     result = result.replace(/,\s*\./g, '.');
     result = result.replace(/\.\s*\./g, '.');
     result = result.replace(/\.\s*,/g, '.');
+    result = result.replace(/;\s*\./g, '.');
+    result = result.replace(/\.\s*;/g, '.');
     result = result.replace(/  +/g, ' ');
     result = result.replace(/\. ([a-z])/g, (m, c) => '. ' + c.toUpperCase());
+    // Fix "However." or "However," as standalone → merge with next sentence
+    result = result.replace(/\bHowever\.\s+/gi, 'However, ');
+    // Fix stray "and and", "the the" etc.
+    result = result.replace(/\b(\w+)\s+\1\b/gi, '$1');
+    // Fix ". ," artifact
+    result = result.replace(/\.\s*,\s*/g, '. ');
 
     return { text: result, changeCount };
   }

@@ -517,7 +517,7 @@
     'demonstrate': ['show', 'prove', 'make clear'],
     'indicates': ['shows', 'suggests', 'points to'],
     'indicate': ['show', 'suggest', 'point to'],
-    'participation': ['involvement', 'active role', 'input'],
+    'participation': ['involvement', 'input', 'contribution'],
     'terminology': ['terms', 'language', 'jargon'],
     'engagement': ['involvement', 'participation', 'interaction'],
     'perspectives': ['viewpoints', 'angles', 'outlooks'],
@@ -2059,6 +2059,19 @@
     result = result.replace(/\b(\w+)\s+\1\b/gi, '$1');
     // Fix ". ," artifact
     result = result.replace(/\.\s*,\s*/g, '. ');
+    // Fix capital letters after commas and semicolons (e.g. "Over time, This" → "Over time, this")
+    result = result.replace(/,\s+([A-Z])([a-z])/g, (m, cap, rest) => {
+      // Don't lowercase proper nouns or sentence starts after period
+      const word = cap + rest;
+      const properNouns = ['The', 'This', 'That', 'These', 'Those', 'Our', 'We', 'It', 'Its', 'Some', 'Many', 'Most', 'All', 'Each', 'Every', 'Over'];
+      if (properNouns.includes(word)) {
+        return ', ' + word.charAt(0).toLowerCase() + word.slice(1);
+      }
+      return m;
+    });
+    // Fix "; However, The" → "; however, the"
+    result = result.replace(/;\s*However,\s*The\b/gi, '; however, the');
+    result = result.replace(/;\s*However,\s*([A-Z])/g, (m, c) => '; however, ' + c.toLowerCase());
 
     return { text: result, changeCount };
   }

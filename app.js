@@ -1852,15 +1852,6 @@
       });
     }
 
-    // --- Break opening sentence essay pattern ---
-    {
-      result = result.replace(/^([\w\s]+has expanded[\w\s]*?),?\s*and\s+(the UK|Britain|England)/im, (match, first, uk) => {
-        changeCount++;
-        const cleanFirst = first.replace(/[,\s]+$/, '');
-        return cleanFirst + '. ' + uk.charAt(0).toUpperCase() + uk.slice(1);
-      });
-    }
-
     // --- Final cleanup ---
     result = result.replace(/,\s*\./g, '.');
     result = result.replace(/\.\s*\./g, '.');
